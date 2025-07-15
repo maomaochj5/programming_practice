@@ -1,0 +1,2 @@
+/usr/bin/ar qc libTestCommon.a CMakeFiles/TestCommon.dir/TestCommon_autogen/mocs_compilation.cpp.o CMakeFiles/TestCommon.dir/TestCommon.cpp.o
+/usr/bin/ranlib libTestCommon.a

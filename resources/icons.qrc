@@ -1,0 +1,61 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/icons">
+        <!-- 主要功能图标 -->
+        <file>new_sale.png</file>
+        <file>save_sale.png</file>
+        <file>print_receipt.png</file>
+        <file>settings.png</file>
+        <file>exit.png</file>
+        
+        <!-- 商品管理图标 -->
+        <file>add_product.png</file>
+        <file>edit_product.png</file>
+        <file>delete_product.png</file>
+        <file>import_products.png</file>
+        <file>export_products.png</file>
+        <file>search_product.png</file>
+        
+        <!-- 扫描相关图标 -->
+        <file>barcode_scan.png</file>
+        <file>camera.png</file>
+        <file>scan_start.png</file>
+        <file>scan_stop.png</file>
+        
+        <!-- 支付相关图标 -->
+        <file>cash.png</file>
+        <file>card.png</file>
+        <file>mobile_pay.png</file>
+        <file>discount.png</file>
+        
+        <!-- AI推荐图标 -->
+        <file>ai_recommendation.png</file>
+        <file>trending.png</file>
+        <file>popular.png</file>
+        
+        <!-- 系统图标 -->
+        <file>refresh.png</file>
+        <file>database.png</file>
+        <file>report.png</file>
+        <file>help.png</file>
+        <file>about.png</file>
+        
+        <!-- 状态图标 -->
+        <file>connected.png</file>
+        <file>disconnected.png</file>
+        <file>warning.png</file>
+        <file>error.png</file>
+        <file>success.png</file>
+    </qresource>
+    
+    <qresource prefix="/images">
+        <!-- 应用程序图标 -->
+        <file>app_icon.png</file>
+        <file>logo.png</file>
+        <file>splash.png</file>
+        
+        <!-- 商品默认图片 -->
+        <file>product_placeholder.png</file>
+        <file>no_image.png</file>
+    </qresource>
+</RCC>

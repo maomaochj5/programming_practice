@@ -1,0 +1,430 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-d3ada2c244d0d305770e.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5
+					]
+				},
+				{
+					"build" : "tests",
+					"childIndexes" : 
+					[
+						2,
+						3
+					],
+					"jsonFile" : "directory-tests-Debug-b01f6abb0ab61427ef3b.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "tests",
+					"targetIndexes" : 
+					[
+						12,
+						13,
+						14,
+						35
+					]
+				},
+				{
+					"build" : "tests/unit",
+					"jsonFile" : "directory-tests.unit-Debug-4ac8c025c276fb39190f.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "tests/unit",
+					"targetIndexes" : 
+					[
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						15,
+						16,
+						17,
+						24,
+						25,
+						26,
+						27,
+						28,
+						29,
+						34
+					]
+				},
+				{
+					"build" : "tests/integration",
+					"jsonFile" : "directory-tests.integration-Debug-eee40bc7e66a7d94f52a.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 0,
+					"source" : "tests/integration",
+					"targetIndexes" : 
+					[
+						18,
+						19,
+						20,
+						21,
+						22,
+						23,
+						30,
+						31,
+						32,
+						33
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3
+					],
+					"name" : "SmartPOS",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20,
+						21,
+						22,
+						23,
+						24,
+						25,
+						26,
+						27,
+						28,
+						29,
+						30,
+						31,
+						32,
+						33,
+						34,
+						35
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "SmartPOS::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-SmartPOS-Debug-627aba577acc2176e004.json",
+					"name" : "SmartPOS",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "SmartPOSCore::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-SmartPOSCore-Debug-87244109fc5883c79431.json",
+					"name" : "SmartPOSCore",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "SmartPOSCore_autogen::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-SmartPOSCore_autogen-Debug-f7bea30b18ce1c187433.json",
+					"name" : "SmartPOSCore_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "SmartPOSCore_autogen_timestamp_deps::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-SmartPOSCore_autogen_timestamp_deps-Debug-e7f55e3f80f77337782f.json",
+					"name" : "SmartPOSCore_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "SmartPOS_autogen::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-SmartPOS_autogen-Debug-2f27aebab0ee385a0c13.json",
+					"name" : "SmartPOS_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "SmartPOS_autogen_timestamp_deps::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-SmartPOS_autogen_timestamp_deps-Debug-30b7ca8d4fd954717a8f.json",
+					"name" : "SmartPOS_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestAIRecommender::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestAIRecommender-Debug-bcc0346a38ac001f1895.json",
+					"name" : "TestAIRecommender",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestAIRecommender_autogen::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestAIRecommender_autogen-Debug-8853857d4e91f1129906.json",
+					"name" : "TestAIRecommender_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestAIRecommender_autogen_timestamp_deps::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestAIRecommender_autogen_timestamp_deps-Debug-7dfc9bd63fc03ac655a6.json",
+					"name" : "TestAIRecommender_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestCheckoutController::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestCheckoutController-Debug-4b3cd0f11a95aa48d188.json",
+					"name" : "TestCheckoutController",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestCheckoutController_autogen::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestCheckoutController_autogen-Debug-af7e2398cd4fbdc8f2ba.json",
+					"name" : "TestCheckoutController_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestCheckoutController_autogen_timestamp_deps::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestCheckoutController_autogen_timestamp_deps-Debug-7523ac4dfe08734047d6.json",
+					"name" : "TestCheckoutController_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "TestCommon::@a44f0ac069e85531cdee",
+					"jsonFile" : "target-TestCommon-Debug-a75706df9d346bab0291.json",
+					"name" : "TestCommon",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "TestCommon_autogen::@a44f0ac069e85531cdee",
+					"jsonFile" : "target-TestCommon_autogen-Debug-6689abe9ae732c78dbcf.json",
+					"name" : "TestCommon_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "TestCommon_autogen_timestamp_deps::@a44f0ac069e85531cdee",
+					"jsonFile" : "target-TestCommon_autogen_timestamp_deps-Debug-ff0165f61b3bf17e7711.json",
+					"name" : "TestCommon_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestDatabaseManager::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestDatabaseManager-Debug-86e779822f5d465d2ecc.json",
+					"name" : "TestDatabaseManager",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestDatabaseManager_autogen::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestDatabaseManager_autogen-Debug-3c5e0acbe3bd28cb0f6f.json",
+					"name" : "TestDatabaseManager_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestDatabaseManager_autogen_timestamp_deps::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestDatabaseManager_autogen_timestamp_deps-Debug-b2ec8b3429a8fc6cca00.json",
+					"name" : "TestDatabaseManager_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "TestGUIAutomation::@a40f6d277e0496dfeabf",
+					"jsonFile" : "target-TestGUIAutomation-Debug-f4ef387ff5ec333b8170.json",
+					"name" : "TestGUIAutomation",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "TestGUIAutomation_autogen::@a40f6d277e0496dfeabf",
+					"jsonFile" : "target-TestGUIAutomation_autogen-Debug-1b6c6e91553ca4dad83f.json",
+					"name" : "TestGUIAutomation_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "TestGUIAutomation_autogen_timestamp_deps::@a40f6d277e0496dfeabf",
+					"jsonFile" : "target-TestGUIAutomation_autogen_timestamp_deps-Debug-e10486b60b77ccba1b26.json",
+					"name" : "TestGUIAutomation_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "TestGUIBasic::@a40f6d277e0496dfeabf",
+					"jsonFile" : "target-TestGUIBasic-Debug-13e9e81e7c218b4b8e04.json",
+					"name" : "TestGUIBasic",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "TestGUIBasic_autogen::@a40f6d277e0496dfeabf",
+					"jsonFile" : "target-TestGUIBasic_autogen-Debug-4c48346d3144ace7ba59.json",
+					"name" : "TestGUIBasic_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "TestGUIBasic_autogen_timestamp_deps::@a40f6d277e0496dfeabf",
+					"jsonFile" : "target-TestGUIBasic_autogen_timestamp_deps-Debug-4dd01e33bc124a69a171.json",
+					"name" : "TestGUIBasic_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestProduct::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestProduct-Debug-f25255cfda112f65274a.json",
+					"name" : "TestProduct",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestProductManager::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestProductManager-Debug-39763f3d798916f3d69b.json",
+					"name" : "TestProductManager",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestProductManager_autogen::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestProductManager_autogen-Debug-65fdfa13971de950c148.json",
+					"name" : "TestProductManager_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestProductManager_autogen_timestamp_deps::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestProductManager_autogen_timestamp_deps-Debug-ad832c7e02db81ca606c.json",
+					"name" : "TestProductManager_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestProduct_autogen::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestProduct_autogen-Debug-af5f16a70811e92032a7.json",
+					"name" : "TestProduct_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "TestProduct_autogen_timestamp_deps::@17bd492d087794b9594e",
+					"jsonFile" : "target-TestProduct_autogen_timestamp_deps-Debug-855b5a8d79e30f61c370.json",
+					"name" : "TestProduct_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "TestSmartPOSWorkflow::@a40f6d277e0496dfeabf",
+					"jsonFile" : "target-TestSmartPOSWorkflow-Debug-9d3af72e8d234719d7ae.json",
+					"name" : "TestSmartPOSWorkflow",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "TestSmartPOSWorkflow_autogen::@a40f6d277e0496dfeabf",
+					"jsonFile" : "target-TestSmartPOSWorkflow_autogen-Debug-3f0f3473be644ec93019.json",
+					"name" : "TestSmartPOSWorkflow_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "TestSmartPOSWorkflow_autogen_timestamp_deps::@a40f6d277e0496dfeabf",
+					"jsonFile" : "target-TestSmartPOSWorkflow_autogen_timestamp_deps-Debug-e3474e0a636b8e82bb5b.json",
+					"name" : "TestSmartPOSWorkflow_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "all_integration_tests::@a40f6d277e0496dfeabf",
+					"jsonFile" : "target-all_integration_tests-Debug-615d8d7caacdd374c8af.json",
+					"name" : "all_integration_tests",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "all_unit_tests::@17bd492d087794b9594e",
+					"jsonFile" : "target-all_unit_tests-Debug-d2cf4aa2ed41d2c7fedb.json",
+					"name" : "all_unit_tests",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "run_all_tests::@a44f0ac069e85531cdee",
+					"jsonFile" : "target-run_all_tests-Debug-2f088dce88f5b88c1cf0.json",
+					"name" : "run_all_tests",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/Users/maomao/Project/normal_1/build",
+		"source" : "/Users/maomao/Project/normal_1"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 8
+	}
+}

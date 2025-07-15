@@ -1,0 +1,107 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(SmartPOS VERSION 1.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Find required Qt components
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Sql Network PrintSupport)
+
+# Enable Qt MOC, UIC, and RCC
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+
+# Include directories
+include_directories(src)
+
+# Source files (excluding main.cpp for library)
+set(CORE_SOURCES
+    src/models/Product.cpp
+    src/models/Customer.cpp
+    src/models/Sale.cpp
+    src/models/SaleItem.cpp
+    src/controllers/ProductManager.cpp
+    src/controllers/CheckoutController.cpp
+    src/ui/MainWindow.cpp
+    src/ui/ProductDialog.cpp
+    src/ui/PaymentDialog.cpp
+    src/database/DatabaseManager.cpp
+    src/barcode/BarcodeScanner.cpp
+    src/ai/AIRecommender.cpp
+    src/utils/ReceiptPrinter.cpp
+)
+
+# All sources including main.cpp
+set(SOURCES
+    src/main.cpp
+    ${CORE_SOURCES}
+)
+
+# Header files
+set(HEADERS
+    src/models/Product.h
+    src/models/Customer.h
+    src/models/Sale.h
+    src/models/SaleItem.h
+    src/controllers/ProductManager.h
+    src/controllers/CheckoutController.h
+    src/ui/MainWindow.h
+    src/ui/ProductDialog.h
+    src/ui/PaymentDialog.h
+    src/database/DatabaseManager.h
+    src/barcode/BarcodeScanner.h
+    src/ai/AIRecommender.h
+    src/utils/ReceiptPrinter.h
+)
+
+# Resource files
+set(RESOURCES
+    resources/icons.qrc
+)
+
+# Create a library for the core functionality (for testing)
+add_library(SmartPOSCore STATIC ${CORE_SOURCES} ${HEADERS} ${RESOURCES})
+target_link_libraries(SmartPOSCore 
+    Qt6::Core 
+    Qt6::Widgets 
+    Qt6::Sql 
+    Qt6::Network
+    Qt6::PrintSupport
+)
+
+# Create executable
+add_executable(SmartPOS src/main.cpp)
+target_link_libraries(SmartPOS SmartPOSCore)
+
+# Compiler-specific options
+if(MSVC)
+    target_compile_options(SmartPOS PRIVATE /W4)
+else()
+    target_compile_options(SmartPOS PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# Installation
+install(TARGETS SmartPOS
+    BUNDLE DESTINATION .
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+# Copy Qt runtime dependencies (Windows)
+if(WIN32)
+    find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS ${Qt6_DIR}/../../../bin)
+    if(WINDEPLOYQT_EXECUTABLE)
+        add_custom_command(TARGET SmartPOS POST_BUILD
+            COMMAND ${WINDEPLOYQT_EXECUTABLE} $<TARGET_FILE:SmartPOS>
+            COMMENT "Deploying Qt libraries")
+    endif()
+endif()
+
+# Testing
+option(BUILD_TESTS "Build tests" ON)
+if(BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

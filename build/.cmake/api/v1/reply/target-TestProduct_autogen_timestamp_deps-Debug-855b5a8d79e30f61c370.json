@@ -1,0 +1,38 @@
+{
+	"backtrace" : 0,
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : 
+		[
+			"tests/unit/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			}
+		]
+	},
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 0,
+			"id" : "SmartPOSCore::@6890427a1f51a3e7e1df"
+		},
+		{
+			"backtrace" : 0,
+			"id" : "TestCommon::@a44f0ac069e85531cdee"
+		}
+	],
+	"id" : "TestProduct_autogen_timestamp_deps::@17bd492d087794b9594e",
+	"isGeneratorProvided" : true,
+	"name" : "TestProduct_autogen_timestamp_deps",
+	"paths" : 
+	{
+		"build" : "tests/unit",
+		"source" : "tests/unit"
+	},
+	"sources" : [],
+	"type" : "UTILITY"
+}

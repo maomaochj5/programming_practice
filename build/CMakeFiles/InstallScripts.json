@@ -1,0 +1,10 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/maomao/Project/normal_1/build/cmake_install.cmake",
+		"/Users/maomao/Project/normal_1/build/tests/cmake_install.cmake",
+		"/Users/maomao/Project/normal_1/build/tests/unit/cmake_install.cmake",
+		"/Users/maomao/Project/normal_1/build/tests/integration/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

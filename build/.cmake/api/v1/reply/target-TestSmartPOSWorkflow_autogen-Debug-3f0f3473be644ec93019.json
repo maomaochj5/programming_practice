@@ -1,0 +1,71 @@
+{
+	"backtrace" : 0,
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : 
+		[
+			"tests/integration/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			}
+		]
+	},
+	"dependencies" : 
+	[
+		{
+			"id" : "TestSmartPOSWorkflow_autogen_timestamp_deps::@a40f6d277e0496dfeabf"
+		}
+	],
+	"id" : "TestSmartPOSWorkflow_autogen::@a40f6d277e0496dfeabf",
+	"isGeneratorProvided" : true,
+	"name" : "TestSmartPOSWorkflow_autogen",
+	"paths" : 
+	{
+		"build" : "tests/integration",
+		"source" : "tests/integration"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "",
+			"sourceIndexes" : 
+			[
+				0
+			]
+		},
+		{
+			"name" : "CMake Rules",
+			"sourceIndexes" : 
+			[
+				1,
+				2
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 0,
+			"isGenerated" : true,
+			"path" : "build/tests/integration/CMakeFiles/TestSmartPOSWorkflow_autogen",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 0,
+			"isGenerated" : true,
+			"path" : "build/tests/integration/CMakeFiles/TestSmartPOSWorkflow_autogen.rule",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 0,
+			"isGenerated" : true,
+			"path" : "build/tests/integration/TestSmartPOSWorkflow_autogen/timestamp.rule",
+			"sourceGroupIndex" : 1
+		}
+	],
+	"type" : "UTILITY"
+}

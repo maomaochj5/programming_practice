@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1400</width>
+    <height>900</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>智能超市收银系统</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../resources/icons.qrc">
+    <normaloff>:/images/app_icon.png</normaloff>:/images/app_icon.png</iconset>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QSplitter" name="mainSplitter">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="QWidget" name="leftPanel">
+       <property name="minimumSize">
+        <size>
+         <width>350</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>400</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <layout class="QVBoxLayout" name="leftLayout">
+        <item>
+         <widget class="QGroupBox" name="productSearchGroup">
+          <property name="title">
+           <string>商品搜索</string>
+          </property>
+          <layout class="QVBoxLayout" name="searchLayout">
+           <item>
+            <layout class="QHBoxLayout" name="searchInputLayout">
+             <item>
+              <widget class="QLineEdit" name="searchLineEdit">
+               <property name="placeholderText">
+                <string>输入商品名称或条形码...</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="searchButton">
+               <property name="text">
+                <string>搜索</string>
+               </property>
+               <property name="icon">
+                <iconset resource="../resources/icons.qrc">
+                 <normaloff>:/icons/search_product.png</normaloff>:/icons/search_product.png</iconset>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QListWidget" name="productListWidget">
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>200</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="barcodeGroup">
+          <property name="title">
+           <string>条形码扫描</string>
+          </property>
+          <layout class="QVBoxLayout" name="barcodeLayout">
+           <item>
+            <layout class="QHBoxLayout" name="barcodeButtonLayout">
+             <item>
+              <widget class="QPushButton" name="startScanButton">
+               <property name="text">
+                <string>开始扫描</string>
+               </property>
+               <property name="icon">
+                <iconset resource="../resources/icons.qrc">
+                 <normaloff>:/icons/scan_start.png</normaloff>:/icons/scan_start.png</iconset>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="stopScanButton">
+               <property name="text">
+                <string>停止扫描</string>
+               </property>
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="icon">
+                <iconset resource="../resources/icons.qrc">
+                 <normaloff>:/icons/scan_stop.png</normaloff>:/icons/scan_stop.png</iconset>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QLabel" name="scanStatusLabel">
+             <property name="text">
+              <string>扫描状态: 就绪</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="recommendationGroup">
+          <property name="title">
+           <string>AI智能推荐</string>
+          </property>
+          <layout class="QVBoxLayout" name="recommendationLayout">
+           <item>
+            <widget class="QLabel" name="recommendationLabel">
+             <property name="text">
+              <string>推荐商品：</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QListWidget" name="recommendationListWidget">
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>150</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="refreshRecommendationButton">
+             <property name="text">
+              <string>刷新推荐</string>
+             </property>
+             <property name="icon">
+              <iconset resource="../resources/icons.qrc">
+               <normaloff>:/icons/ai_recommendation.png</normaloff>:/icons/ai_recommendation.png</iconset>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <spacer name="leftVerticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="centerPanel">
+       <layout class="QVBoxLayout" name="centerLayout">
+        <item>
+         <widget class="QGroupBox" name="cartGroup">
+          <property name="title">
+           <string>购物车</string>
+          </property>
+          <layout class="QVBoxLayout" name="cartLayout">
+           <item>
+            <widget class="QTableView" name="cartTableView">
+             <property name="alternatingRowColors">
+              <bool>true</bool>
+             </property>
+             <property name="selectionBehavior">
+              <enum>QAbstractItemView::SelectRows</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="cartButtonLayout">
+             <item>
+              <widget class="QPushButton" name="addToCartButton">
+               <property name="text">
+                <string>添加到购物车</string>
+               </property>
+               <property name="icon">
+                <iconset resource="../resources/icons.qrc">
+                 <normaloff>:/icons/add_product.png</normaloff>:/icons/add_product.png</iconset>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="removeFromCartButton">
+               <property name="text">
+                <string>从购物车移除</string>
+               </property>
+               <property name="icon">
+                <iconset resource="../resources/icons.qrc">
+                 <normaloff>:/icons/delete_product.png</normaloff>:/icons/delete_product.png</iconset>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="cartButtonSpacer">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QPushButton" name="clearCartButton">
+               <property name="text">
+                <string>清空购物车</string>
+               </property>
+               <property name="icon">
+                <iconset resource="../resources/icons.qrc">
+                 <normaloff>:/icons/refresh.png</normaloff>:/icons/refresh.png</iconset>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="totalGroup">
+          <property name="title">
+           <string>结算信息</string>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>150</height>
+           </size>
+          </property>
+          <layout class="QGridLayout" name="totalLayout">
+           <item row="0" column="0">
+            <widget class="QLabel" name="subtotalLabel">
+             <property name="text">
+              <string>小计:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="subtotalValueLabel">
+             <property name="text">
+              <string>¥0.00</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="discountLabel">
+             <property name="text">
+              <string>折扣:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLabel" name="discountValueLabel">
+             <property name="text">
+              <string>¥0.00</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="totalLabel">
+             <property name="text">
+              <string>总计:</string>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLabel" name="totalValueLabel">
+             <property name="text">
+              <string>¥0.00</string>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>14</pointsize>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0" colspan="2">
+            <layout class="QHBoxLayout" name="checkoutButtonLayout">
+             <item>
+              <widget class="QPushButton" name="discountButton">
+               <property name="text">
+                <string>折扣</string>
+               </property>
+               <property name="icon">
+                <iconset resource="../resources/icons.qrc">
+                 <normaloff>:/icons/discount.png</normaloff>:/icons/discount.png</iconset>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="checkoutButton">
+               <property name="text">
+                <string>结账</string>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>12</pointsize>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="icon">
+                <iconset resource="../resources/icons.qrc">
+                 <normaloff>:/icons/cash.png</normaloff>:/icons/cash.png</iconset>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="rightPanel">
+       <property name="minimumSize">
+        <size>
+         <width>250</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>300</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <layout class="QVBoxLayout" name="rightLayout">
+        <item>
+         <widget class="QGroupBox" name="quickActionsGroup">
+          <property name="title">
+           <string>快捷操作</string>
+          </property>
+          <layout class="QGridLayout" name="quickActionsLayout">
+           <item row="0" column="0">
+            <widget class="QPushButton" name="newSaleButton">
+             <property name="text">
+              <string>新建销售</string>
+             </property>
+             <property name="icon">
+              <iconset resource="../resources/icons.qrc">
+               <normaloff>:/icons/new_sale.png</normaloff>:/icons/new_sale.png</iconset>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QPushButton" name="printReceiptButton">
+             <property name="text">
+              <string>打印小票</string>
+             </property>
+             <property name="icon">
+              <iconset resource="../resources/icons.qrc">
+               <normaloff>:/icons/print_receipt.png</normaloff>:/icons/print_receipt.png</iconset>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QPushButton" name="manageProductsButton">
+             <property name="text">
+              <string>商品管理</string>
+             </property>
+             <property name="icon">
+              <iconset resource="../resources/icons.qrc">
+               <normaloff>:/icons/edit_product.png</normaloff>:/icons/edit_product.png</iconset>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QPushButton" name="reportsButton">
+             <property name="text">
+              <string>销售报表</string>
+             </property>
+             <property name="icon">
+              <iconset resource="../resources/icons.qrc">
+               <normaloff>:/icons/report.png</normaloff>:/icons/report.png</iconset>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="systemInfoGroup">
+          <property name="title">
+           <string>系统信息</string>
+          </property>
+          <layout class="QVBoxLayout" name="systemInfoLayout">
+           <item>
+            <widget class="QLabel" name="currentUserLabel">
+             <property name="text">
+              <string>当前用户: 收银员</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="currentTimeLabel">
+             <property name="text">
+              <string>当前时间: --:--:--</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="connectionStatusLabel">
+             <property name="text">
+              <string>数据库: 已连接</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="scannerStatusLabel">
+             <property name="text">
+              <string>扫描器: 就绪</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <spacer name="rightVerticalSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1400</width>
+     <height>22</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QToolBar" name="mainToolBar">
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+ </widget>
+ <resources>
+  <include location="../resources/icons.qrc"/>
+ </resources>
+ <connections/>
+</ui>
