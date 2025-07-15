@@ -86,7 +86,7 @@ SmartPOS/
 ├── 📁 src/                         # 源代码
 │   ├── main.cpp                    # 程序入口点
 │   ├── 📁 ui/                      # 用户界面层
-│   │   ├── MainWindow.cpp/h/ui     # 主窗口(MVC中的View)
+│   │   ├── MainWindow.cpp/h/ui     # 主窗口
 │   │   ├── ProductDialog.cpp/h     # 商品对话框
 │   │   └── PaymentDialog.cpp/h     # 支付对话框
 │   ├── 📁 models/                  # 数据模型层
@@ -94,24 +94,32 @@ SmartPOS/
 │   │   ├── Customer.cpp/h          # 客户模型  
 │   │   ├── Sale.cpp/h              # 销售模型
 │   │   └── SaleItem.cpp/h          # 销售项目模型
-│   ├── 📁 controllers/             # 控制器层(MVC中的Controller)
+│   ├── 📁 controllers/             # 控制器层
 │   │   ├── ProductManager.cpp/h    # 商品管理控制器
 │   │   └── CheckoutController.cpp/h # 收银流程控制器
 │   ├── 📁 database/                # 数据持久层
-│   │   └── DatabaseManager.cpp/h   # SQLite数据库管理器
-│   ├── 📁 barcode/                 # 硬件集成-条码识别
+│   │   └── DatabaseManager.cpp/h  # 数据库管理器
+│   ├── 📁 ai/                      # AI推荐系统
+│   │   └── AIRecommender.cpp/h     # 智能推荐引擎
+│   ├── 📁 barcode/                 # 条码识别
 │   │   └── BarcodeScanner.cpp/h    # 条码扫描器
-│   ├── 📁 ai/                      # AI服务层
-│   │   └── AIRecommender.cpp/h     # 智能推荐算法
 │   └── 📁 utils/                   # 工具类
-│       └── ReceiptPrinter.cpp/h    # 票据打印工具
-├── 📁 tests/                       # 完整测试套件
-│   ├── TestCommon.cpp/h            # 测试通用代码
+│       └── ReceiptPrinter.cpp/h    # 票据打印
+├── 📁 tests/                       # 测试代码
 │   ├── 📁 unit/                    # 单元测试
-│   │   ├── TestProduct.cpp         # 商品模型测试
-│   │   ├── TestProductManager.cpp  # 商品管理器测试
-│   │   ├── TestCheckoutController.cpp # 收银控制器测试
-│   │   ├── TestAIRecommender.cpp   # AI推荐测试
+│   └── 📁 integration/             # 集成测试
+├── 📁 resources/                   # 资源文件
+│   ├── icons.qrc                   # Qt资源文件
+│   └── *.png                       # 图标文件
+├── 📁 scripts/                     # 自动化脚本
+│   ├── build.sh                    # Linux/macOS构建脚本
+│   ├── build.bat                   # Windows构建脚本
+│   └── setup-dev.sh                # 开发环境配置
+├── 📁 .github/workflows/           # CI/CD配置
+│   └── ci-cd.yml                   # GitHub Actions
+```
+
+## 🏗️ 技术架构
 │   │   └── TestDatabaseManager.cpp # 数据库测试
 │   └── 📁 integration/             # 集成测试
 │       ├── TestSmartPOSWorkflow.cpp # 完整工作流测试
