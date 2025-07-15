@@ -1,0 +1,125 @@
+# Build directories
+build/
+build-*/
+*-build/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Qt
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.moc
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qm
+.qmake.cache
+.qmake.stash
+
+# Qt Creator
+CMakeLists.txt.user
+CMakeLists.txt.user.*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+SmartPOS
+TestProduct
+TestProductManager
+TestCheckoutController
+TestAIRecommender
+TestDatabaseManager
+TestSmartPOSWorkflow
+TestGUIBasic
+TestGUIAutomation
+TestGUIInterface
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*~
+.DS_Store
+Thumbs.db
+
+# Test results
+test_results/
+*.xml
+*.html
+
+# Documentation build
+docs/_build/
+docs/html/
+docs/latex/
+
+# Package files
+*.tar.gz
+*.zip
+*.7z
+*.rar
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Application specific
+recommendation_model.json
+pos_system.db
+receipt_*.txt

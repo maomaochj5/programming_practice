@@ -29,10 +29,14 @@ add_integration_test(TestGUIAutomation)
 # 基础GUI测试（更稳定）
 add_integration_test(TestGUIBasic)
 
+# GUI接口级测试
+add_integration_test(TestGUIInterface)
+
 # 创建运行所有集成测试的目标
 add_custom_target(all_integration_tests
     DEPENDS 
         TestSmartPOSWorkflow
         TestGUIAutomation
         TestGUIBasic
+        TestGUIInterface
 )

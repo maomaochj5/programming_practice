@@ -72,6 +72,7 @@ private slots:
     void onEditProduct();
     void onDeleteProduct();
     void onRefreshProducts();
+    void onProductDoubleClicked(const QModelIndex& index);
     
     // 条码扫描槽函数
     void onBarcodeScanned(const QString& barcode);

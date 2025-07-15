@@ -288,6 +288,10 @@ QWidget* MainWindow::createProductArea()
     m_productTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_productTable->setAlternatingRowColors(true);
     m_productTable->horizontalHeader()->setStretchLastSection(true);
+    
+    // 添加双击事件处理
+    connect(m_productTable, &QTableView::doubleClicked, this, &MainWindow::onProductDoubleClicked);
+    
     layout->addWidget(m_productTable);
     
     // 操作按钮
@@ -535,6 +539,21 @@ void MainWindow::updateCartDisplay()
 void MainWindow::onRefreshProducts()
 {
     updateProductDisplay();
+}
+
+void MainWindow::onProductDoubleClicked(const QModelIndex& index)
+{
+    if (!index.isValid()) {
+        return;
+    }
+    
+    // 获取选中商品的条码（第2列，索引为1）
+    QString barcode = m_productModel->item(index.row(), 1)->text();
+    
+    if (!barcode.isEmpty()) {
+        qDebug() << "双击添加商品，条码:" << barcode;
+        onBarcodeScanned(barcode);
+    }
 }
 
 void MainWindow::updateProductDisplay()
