@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find required Qt components
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Sql Network PrintSupport)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Sql Network PrintSupport Multimedia)
 
 # Enable Qt MOC, UIC, and RCC
 set(CMAKE_AUTOMOC ON)
@@ -58,7 +58,7 @@ set(HEADERS
 
 # Resource files
 set(RESOURCES
-    resources/icons.qrc
+    resources/resources.qrc
 )
 
 # Create a library for the core functionality (for testing)
@@ -69,6 +69,7 @@ target_link_libraries(SmartPOSCore
     Qt6::Sql 
     Qt6::Network
     Qt6::PrintSupport
+    Qt6::Multimedia
 )
 
 # Create executable

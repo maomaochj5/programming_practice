@@ -26,15 +26,40 @@ class ProductDialog : public QDialog
 
 public:
     explicit ProductDialog(QWidget *parent = nullptr);
-    explicit ProductDialog(const Product &product, QWidget *parent = nullptr);
+    explicit ProductDialog(const Product* product, QWidget *parent = nullptr);
 
-    Product getProduct() const;
-    void setProduct(const Product &product);
+    /**
+     * @brief 析构函数
+     */
+    ~ProductDialog();
+
+    /**
+     * @brief 获取商品对象
+     * @return 商品智能指针
+     */
+    std::unique_ptr<Product> getProduct() const;
+
+    /**
+     * @brief 设置商品对象
+     * @param product 商品指针
+     */
+    void setProduct(const Product* product);
+
+    /**
+     * @brief 接受对话框
+     */
+    void accept() override;
+
+    /**
+     * @brief 拒绝对话框
+     */
+    void reject() override;
 
 private slots:
     void selectImage();
     void generateBarcode();
     void validateInput();
+    void onAccept();
 
 private:
     void setupUI();

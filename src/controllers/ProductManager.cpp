@@ -10,17 +10,24 @@ ProductManager::ProductManager(QObject *parent)
     : QObject(parent)
     , m_databaseManager(&DatabaseManager::getInstance())
     , m_lowStockThreshold(5)
+    , m_cacheDirty(true)
 {
     qDebug() << "商品管理器初始化完成";
 }
 
 ProductManager::~ProductManager()
 {
-    qDebug() << "商品管理器析构";
+    qDebug() << "商品管理器析构，清理商品缓存";
+    // 清理商品缓存
+    for (Product* product : m_productCache) {
+        delete product;
+    }
+    m_productCache.clear();
 }
 
 bool ProductManager::addProduct(Product* product)
 {
+    qDebug() << "ProductManager::addProduct called, product:" << product << (product ? product->getName() : "nullptr");
     if (!validateProduct(product)) {
         emit errorOccurred("商品数据无效");
         return false;
@@ -33,6 +40,10 @@ bool ProductManager::addProduct(Product* product)
     }
     
     if (m_databaseManager->saveProduct(product)) {
+        // 添加到缓存
+        m_productCache.append(product);
+        m_cacheDirty = false;
+        
         emit productAdded(product);
         logOperation("添加商品", product->toString());
         
@@ -48,6 +59,7 @@ bool ProductManager::addProduct(Product* product)
 
 bool ProductManager::updateProduct(Product* product)
 {
+    qDebug() << "ProductManager::updateProduct called, product:" << product << (product ? product->getName() : "nullptr");
     if (!product || product->getProductId() <= 0) {
         emit errorOccurred("无效的商品ID");
         return false;
@@ -65,6 +77,15 @@ bool ProductManager::updateProduct(Product* product)
     }
     
     if (m_databaseManager->saveProduct(product)) {
+        // 更新缓存中的商品
+        for (int i = 0; i < m_productCache.size(); ++i) {
+            if (m_productCache[i]->getProductId() == product->getProductId()) {
+                delete m_productCache[i];
+                m_productCache[i] = product;
+                break;
+            }
+        }
+        
         emit productUpdated(product);
         logOperation("更新商品", product->toString());
         
@@ -80,16 +101,26 @@ bool ProductManager::updateProduct(Product* product)
 
 bool ProductManager::deleteProduct(int productId)
 {
+    qDebug() << "ProductManager::deleteProduct called, productId:" << productId;
     if (productId <= 0) {
         emit errorOccurred("无效的商品ID");
         return false;
     }
     
     // 先获取商品信息用于日志
-    auto product = getProduct(productId);
+    Product* product = getProduct(productId);
     QString productInfo = product ? product->toString() : QString("ID: %1").arg(productId);
     
     if (m_databaseManager->deleteProduct(productId)) {
+        // 从缓存中移除
+        for (int i = 0; i < m_productCache.size(); ++i) {
+            if (m_productCache[i]->getProductId() == productId) {
+                delete m_productCache[i];
+                m_productCache.removeAt(i);
+                break;
+            }
+        }
+        
         emit productDeleted(productId);
         logOperation("删除商品", productInfo);
         return true;
@@ -99,34 +130,91 @@ bool ProductManager::deleteProduct(int productId)
     return false;
 }
 
-std::unique_ptr<Product> ProductManager::getProduct(int productId)
+Product* ProductManager::getProduct(int productId)
 {
     if (productId <= 0) {
         return nullptr;
     }
     
-    return m_databaseManager->getProduct(productId);
+    // 先从缓存中查找
+    for (Product* product : m_productCache) {
+        if (product->getProductId() == productId) {
+            return product;
+        }
+    }
+    
+    // 缓存中没有，从数据库获取
+    auto dbProduct = m_databaseManager->getProduct(productId);
+    if (dbProduct) {
+        Product* product = new Product(*dbProduct); // 复制构造
+        m_productCache.append(product);
+        return product;
+    }
+    
+    return nullptr;
 }
 
-std::unique_ptr<Product> ProductManager::getProductByBarcode(const QString& barcode)
+Product* ProductManager::getProductById(int productId)
+{
+    return getProduct(productId);
+}
+
+Product* ProductManager::getProductByBarcode(const QString& barcode)
 {
     if (barcode.isEmpty()) {
         return nullptr;
     }
     
-    return m_databaseManager->getProductByBarcode(barcode);
+    // 先从缓存中查找
+    for (Product* product : m_productCache) {
+        if (product->getBarcode() == barcode) {
+            return product;
+        }
+    }
+    
+    // 缓存中没有，从数据库获取
+    auto dbProduct = m_databaseManager->getProductByBarcode(barcode);
+    if (dbProduct) {
+        Product* product = new Product(*dbProduct); // 复制构造
+        m_productCache.append(product);
+        return product;
+    }
+    
+    return nullptr;
 }
 
 QList<Product*> ProductManager::getAllProducts()
 {
-    QList<Product*> result;
+    // 如果缓存脏了，刷新缓存
+    if (m_cacheDirty) {
+        refreshProductCache();
+    }
     
-    try {
-        // 暂时使用测试数据，避免unique_ptr的复杂性
-        // TODO: 重构DatabaseManager的API以使用原始指针
-        qDebug() << "使用内置测试数据";
+    return m_productCache;
+}
+
+void ProductManager::refreshProductCache()
+{
+    // 清理现有缓存
+    for (Product* product : m_productCache) {
+        delete product;
+    }
+    m_productCache.clear();
+    
+    // 从数据库获取所有商品
+    auto dbProducts = m_databaseManager->getAllProducts();
+    
+    // 转换为原始指针并添加到缓存
+    for (const auto& dbProduct : dbProducts) {
+        Product* product = new Product(*dbProduct); // 复制构造
+        m_productCache.append(product);
+    }
+    
+    // 如果数据库为空，添加一些测试数据
+    if (m_productCache.isEmpty()) {
+        qDebug() << "数据库为空，添加测试数据";
         
-        Product* testProduct1 = new Product(this);
+        Product* testProduct1 = new Product();
         testProduct1->setProductId(1);
         testProduct1->setBarcode("1234567890123");
         testProduct1->setName("测试商品1");
@@ -134,9 +222,9 @@ QList<Product*> ProductManager::getAllProducts()
         testProduct1->setPrice(12.50);
         testProduct1->setStockQuantity(100);
         testProduct1->setCategory("测试分类");
-        result.append(testProduct1);
+        m_productCache.append(testProduct1);
         
-        Product* testProduct2 = new Product(this);
+        Product* testProduct2 = new Product();
         testProduct2->setProductId(2);
         testProduct2->setBarcode("1234567890124");
         testProduct2->setName("测试商品2");
@@ -144,9 +232,9 @@ QList<Product*> ProductManager::getAllProducts()
         testProduct2->setPrice(25.00);
         testProduct2->setStockQuantity(50);
         testProduct2->setCategory("测试分类");
-        result.append(testProduct2);
+        m_productCache.append(testProduct2);
         
-        Product* testProduct3 = new Product(this);
+        Product* testProduct3 = new Product();
         testProduct3->setProductId(3);
         testProduct3->setBarcode("1234567890125");
         testProduct3->setName("低库存商品");
@@ -154,14 +242,11 @@ QList<Product*> ProductManager::getAllProducts()
         testProduct3->setPrice(5.99);
         testProduct3->setStockQuantity(2);  // 低库存
         testProduct3->setCategory("低库存测试");
-        result.append(testProduct3);
-        
-    } catch (const std::exception& e) {
-        qWarning() << "获取商品列表时出错:" << e.what();
-        emit errorOccurred("获取商品列表失败");
+        m_productCache.append(testProduct3);
     }
     
-    return result;
+    m_cacheDirty = false;
+    qDebug() << "商品缓存刷新完成，共" << m_productCache.size() << "个商品";
 }
 
 QList<Product*> ProductManager::getProductsByCategory(const QString& category)
@@ -363,7 +448,7 @@ QStringList ProductManager::getAllCategories()
     QStringList categories;
     auto allProducts = getAllProducts();
     
-    for (const Product* product : allProducts) {
+    for (Product* product : allProducts) {
         QString category = product->getCategory();
         if (!category.isEmpty() && !categories.contains(category)) {
             categories.append(category);
@@ -442,7 +527,7 @@ bool ProductManager::exportProductsToCSV(const QString& filePath)
     out << "条码,名称,描述,价格,库存,分类\n";
     
     auto allProducts = getAllProducts();
-    for (const Product* product : allProducts) {
+    for (Product* product : allProducts) {
         out << QString("%1,%2,%3,%4,%5,%6\n")
                .arg(product->getBarcode())
                .arg(product->getName())

@@ -3,7 +3,7 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QRandomGenerator>
-// #include <QSoundEffect>
+#include <QSoundEffect>
 
 PaymentDialog::PaymentDialog(double totalAmount, QWidget *parent)
     : QDialog(parent)
@@ -11,8 +11,8 @@ PaymentDialog::PaymentDialog(double totalAmount, QWidget *parent)
     , m_changeAmount(0.0)
     , m_result(Cancelled)
     , m_paymentTimer(new QTimer(this))
-    , m_successSound(nullptr)
-    , m_errorSound(nullptr)
+    , m_successSound(new QSoundEffect(this))
+    , m_errorSound(new QSoundEffect(this))
 {
     setWindowTitle(tr("支付"));
     setModal(true);
@@ -21,7 +21,6 @@ PaymentDialog::PaymentDialog(double totalAmount, QWidget *parent)
     updatePaymentDisplay();
     resize(450, 500);
     
-    // 初始化音效（可选）
     setupSounds();
 }
 
@@ -369,20 +368,20 @@ void PaymentDialog::hidePaymentProcessing()
 
 void PaymentDialog::setupSounds()
 {
-    // 简化版本：移除声音功能
-    // 这里可以初始化音效文件，但由于Qt多媒体模块未包含，暂时禁用
+    m_successSound->setSource(QUrl::fromLocalFile(":/sounds/success.wav"));
+    m_successSound->setVolume(0.8);
+    m_errorSound->setSource(QUrl::fromLocalFile(":/sounds/error.wav"));
+    m_errorSound->setVolume(0.8);
 }
 
 void PaymentDialog::playSuccessSound()
 {
-    // 简化版本：不播放声音
-    qDebug() << "播放成功音效（模拟）";
+    m_successSound->play();
 }
 
 void PaymentDialog::playErrorSound()
 {
-    // 简化版本：不播放声音
-    qDebug() << "播放错误音效（模拟）";
+    m_errorSound->play();
 }
 
 PaymentDialog::PaymentMethod PaymentDialog::getPaymentMethod() const

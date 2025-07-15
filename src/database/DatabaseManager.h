@@ -75,9 +75,9 @@ public:
 
     /**
      * @brief 获取所有商品
-     * @return 商品智能指针列表
+     * @return 商品指针列表（由调用方负责释放）
      */
-    QList<std::unique_ptr<Product>> getAllProducts();
+    QList<Product*> getAllProducts();
 
     /**
      * @brief 删除商品

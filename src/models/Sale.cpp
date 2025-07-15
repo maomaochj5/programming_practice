@@ -12,6 +12,19 @@ Sale::Sale(QObject *parent)
     , m_status(InProgress)
     , m_timestamp(QDateTime::currentDateTime())
 {
+    qDebug() << "Sale 构造, this:" << this << ", parent:" << parent;
+}
+
+Sale::~Sale()
+{
+    qDebug() << "Sale 析构, this:" << this;
+    // 清理所有销售项目
+    for (SaleItem* item : m_items) {
+        if (item) {
+            item->deleteLater();
+        }
+    }
+    m_items.clear();
 }
 
 Sale::Sale(int transactionId, Customer* customer, QObject *parent)

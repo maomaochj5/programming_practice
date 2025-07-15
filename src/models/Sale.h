@@ -45,7 +45,12 @@ public:
      * @brief 构造函数
      * @param parent 父对象指针
      */
-    explicit Sale(QObject *parent = nullptr);
+    explicit Sale(QObject* parent = nullptr);
+    
+    /**
+     * @brief 析构函数
+     */
+    ~Sale();
     
     /**
      * @brief 参数化构造函数

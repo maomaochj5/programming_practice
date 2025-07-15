@@ -4,30 +4,43 @@
 #include <QDir>
 #include <QDateTime>
 #include <QRandomGenerator>
+#include <QDebug> // Added for qDebug
 
 ProductDialog::ProductDialog(QWidget *parent)
     : QDialog(parent), m_editMode(false)
 {
+    qDebug() << "ProductDialog 构造(无参数), parent指针:" << parent;
     setWindowTitle(tr("添加商品"));
     setupUI();
     setupValidators();
     setupConnections();
+    validateInput(); // 初始验证
     resize(600, 700);
 }
 
-ProductDialog::ProductDialog(const Product &product, QWidget *parent)
-    : QDialog(parent), m_product(product), m_editMode(true)
+ProductDialog::ProductDialog(const Product* product, QWidget *parent)
+    : QDialog(parent)
 {
+    qDebug() << "ProductDialog 构造(有product), product指针:" << product;
     setWindowTitle(tr("编辑商品"));
     setupUI();
     setupValidators();
     setupConnections();
-    setProduct(product);
+    if (product) {
+        setProduct(product);
+    }
+    validateInput(); // 初始验证
     resize(600, 700);
+}
+
+ProductDialog::~ProductDialog()
+{
+    qDebug() << "ProductDialog 析构";
 }
 
 void ProductDialog::setupUI()
 {
+    qDebug() << "ProductDialog::setupUI 开始";
     auto *mainLayout = new QVBoxLayout(this);
 
     // 基本信息组
@@ -129,6 +142,7 @@ void ProductDialog::setupUI()
     buttonLayout->addWidget(m_okButton);
 
     mainLayout->addLayout(buttonLayout);
+    qDebug() << "ProductDialog::setupUI 完成";
 }
 
 void ProductDialog::setupValidators()
@@ -145,7 +159,7 @@ void ProductDialog::setupValidators()
 
 void ProductDialog::setupConnections()
 {
-    connect(m_okButton, &QPushButton::clicked, this, &QDialog::accept);
+    connect(m_okButton, &QPushButton::clicked, this, &ProductDialog::onAccept);
     connect(m_cancelButton, &QPushButton::clicked, this, &QDialog::reject);
     connect(m_selectImageButton, &QPushButton::clicked, this, &ProductDialog::selectImage);
     connect(m_generateBarcodeButton, &QPushButton::clicked, this, &ProductDialog::generateBarcode);
@@ -248,48 +262,68 @@ void ProductDialog::updateImagePreview()
     }
 }
 
-Product ProductDialog::getProduct() const
+std::unique_ptr<Product> ProductDialog::getProduct() const
 {
-    Product product;
-    product.setName(m_nameEdit->text().trimmed());
-    product.setBarcode(m_barcodeEdit->text().trimmed());
-    product.setPrice(m_priceSpinBox->value());
-    product.setStockQuantity(m_stockSpinBox->value());
-    // product.setMinStock(m_minStockSpinBox->value());  // Product类中暂无此字段
-    product.setCategory(m_categoryCombo->currentText().trimmed());
-    product.setDescription(m_descriptionEdit->toPlainText().trimmed());
-    // product.setSupplier(m_supplierEdit->text().trimmed());  // Product类中暂无此字段
-    // product.setImagePath(m_imagePathEdit->text().trimmed());  // Product类中暂无此字段
-    
+    qDebug() << "ProductDialog::getProduct called, m_editMode:" << m_editMode;
+    auto product = std::make_unique<Product>();
+    product->setName(m_nameEdit->text().trimmed());
+    product->setBarcode(m_barcodeEdit->text().trimmed());
+    product->setDescription(m_descriptionEdit->toPlainText().trimmed());
+    product->setPrice(m_priceSpinBox->value());
+    product->setStockQuantity(m_stockSpinBox->value());
+    product->setCategory(m_categoryCombo->currentText().trimmed());
     if (m_editMode) {
-        product.setProductId(m_product.getProductId());
-        // product.setCreatedAt(m_product.getCreatedAt());  // Product类中暂无此方法
+        product->setProductId(m_product.getProductId());
     }
-    
+    qDebug() << "ProductDialog::getProduct 返回商品:" << product->getName();
     return product;
 }
 
-void ProductDialog::setProduct(const Product &product)
+void ProductDialog::setProduct(const Product *product)
 {
-    m_product = product;
+    qDebug() << "ProductDialog::setProduct called, product:" << product;
+    if (!product) return;
+
+    m_product = *product;
     
-    m_nameEdit->setText(product.getName());
-    m_barcodeEdit->setText(product.getBarcode());
-    m_priceSpinBox->setValue(product.getPrice());
-    m_stockSpinBox->setValue(product.getStockQuantity());
-    // m_minStockSpinBox->setValue(product.getMinStock());  // Product类中暂无此字段
+    m_nameEdit->setText(m_product.getName());
+    m_barcodeEdit->setText(m_product.getBarcode());
+    m_priceSpinBox->setValue(m_product.getPrice());
+    m_stockSpinBox->setValue(m_product.getStockQuantity());
     
-    // 设置类别
-    int categoryIndex = m_categoryCombo->findText(product.getCategory());
+    int categoryIndex = m_categoryCombo->findText(m_product.getCategory());
     if (categoryIndex >= 0) {
         m_categoryCombo->setCurrentIndex(categoryIndex);
     } else {
-        m_categoryCombo->setCurrentText(product.getCategory());
+        m_categoryCombo->setCurrentText(m_product.getCategory());
     }
     
-    m_descriptionEdit->setPlainText(product.getDescription());
-    // m_supplierEdit->setText(product.getSupplier());  // Product类中暂无此字段
-    // m_imagePathEdit->setText(product.getImagePath());  // Product类中暂无此字段
+    m_descriptionEdit->setPlainText(m_product.getDescription());
     
     validateInput();
+    qDebug() << "ProductDialog::setProduct 完成, 商品名称:" << product->getName();
+}
+
+void ProductDialog::onAccept()
+{
+    validateInput();
+    if (m_okButton->isEnabled()) {
+        accept();
+    } else {
+        QMessageBox::warning(this, tr("输入无效"), tr("请检查所有必填字段并更正错误。"));
+    }
+}
+
+void ProductDialog::accept()
+{
+    qDebug() << "ProductDialog::accept called";
+    validateInput();
+    qDebug() << "ProductDialog::accept 验证完成，关闭对话框";
+    QDialog::accept();
+}
+
+void ProductDialog::reject()
+{
+    qDebug() << "ProductDialog::reject called";
+    QDialog::reject();
 }

@@ -54,34 +54,41 @@ public:
     /**
      * @brief 根据ID获取商品
      * @param productId 商品ID
-     * @return 商品智能指针，如果未找到返回nullptr
+     * @return 商品指针，如果未找到返回nullptr
      */
-    std::unique_ptr<Product> getProduct(int productId);
+    Product* getProduct(int productId);
+
+    /**
+     * @brief 根据ID获取商品（别名方法）
+     * @param productId 商品ID
+     * @return 商品指针，如果未找到返回nullptr
+     */
+    Product* getProductById(int productId);
 
     /**
      * @brief 根据条码获取商品
      * @param barcode 条形码
-     * @return 商品智能指针，如果未找到返回nullptr
+     * @return 商品指针，如果未找到返回nullptr
      */
-    std::unique_ptr<Product> getProductByBarcode(const QString& barcode);
+    Product* getProductByBarcode(const QString& barcode);
 
     /**
      * @brief 获取所有商品
-     * @return 商品智能指针列表
+     * @return 商品指针列表
      */
     QList<Product*> getAllProducts();
 
     /**
      * @brief 根据分类获取商品
      * @param category 商品分类
-     * @return 商品智能指针列表
+     * @return 商品指针列表
      */
     QList<Product*> getProductsByCategory(const QString& category);
 
     /**
      * @brief 搜索商品
      * @param keyword 搜索关键词（在名称和描述中搜索）
-     * @return 商品智能指针列表
+     * @return 商品指针列表
      */
     QList<Product*> searchProducts(const QString& keyword);
 
@@ -211,9 +218,16 @@ private:
      */
     void logOperation(const QString& operation, const QString& productInfo);
 
+    /**
+     * @brief 刷新商品缓存
+     */
+    void refreshProductCache();
+
 private:
     DatabaseManager* m_databaseManager;     ///< 数据库管理器
+    QList<Product*> m_productCache;         ///< 商品缓存
     int m_lowStockThreshold;                ///< 低库存阈值
+    bool m_cacheDirty;                      ///< 缓存是否脏
 };
 
 #endif // PRODUCTMANAGER_H

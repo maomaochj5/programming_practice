@@ -25,15 +25,22 @@ CheckoutController::~CheckoutController()
 
 void CheckoutController::setCurrentSale(Sale* sale)
 {
+    qDebug() << "CheckoutController::setCurrentSale called, sale:" << sale;
+    
+    // 先断开之前销售的信号连接
     if (m_currentSale) {
-        // 断开之前销售的信号连接
         disconnect(m_currentSale, nullptr, this, nullptr);
     }
     
+    // 设置新的销售对象
     m_currentSale = sale;
+    qDebug() << "CheckoutController::setCurrentSale m_currentSale set to:" << m_currentSale;
+    
+    // 重置状态
     m_paymentProcessed = false;
     m_changeAmount = 0.0;
     
+    // 只有当新销售对象不为空时才进行连接
     if (m_currentSale) {
         // 连接新销售的信号
         connect(m_currentSale, &Sale::saleChanged,
@@ -45,6 +52,8 @@ void CheckoutController::setCurrentSale(Sale* sale)
         m_currentSale->setCashierName(m_cashierName);
         
         qDebug() << "设置当前销售，ID:" << m_currentSale->getTransactionId();
+    } else {
+        qDebug() << "设置当前销售为nullptr";
     }
     
     emit saleUpdated();
@@ -52,14 +61,11 @@ void CheckoutController::setCurrentSale(Sale* sale)
 
 Sale* CheckoutController::startNewSale(Customer* customer)
 {
-    Sale* newSale = new Sale(this);
-    newSale->setCustomer(customer);
-    newSale->setCashierName(m_cashierName);
-    
-    setCurrentSale(newSale);
-    
-    logOperation("开始新的销售");
-    return newSale;
+    qDebug() << "CheckoutController::startNewSale called, customer:" << customer;
+    Sale* sale = new Sale();
+    setCurrentSale(sale);
+    qDebug() << "CheckoutController::startNewSale created and set new Sale:" << sale;
+    return sale;
 }
 
 bool CheckoutController::addItemToSale(Product* product, int quantity, double unitPrice)
@@ -101,68 +107,65 @@ bool CheckoutController::addItemToSale(Product* product, int quantity, double un
     return true;
 }
 
-bool CheckoutController::removeItemFromSale(int index)
+bool CheckoutController::removeItemFromSale(int productId)
 {
     if (!m_currentSale) {
         emit errorOccurred("当前没有活动的销售");
         return false;
     }
-    
-    if (index < 0 || index >= m_currentSale->getItems().size()) {
-        emit errorOccurred("无效的商品索引");
-        return false;
+
+    const auto& items = m_currentSale->getItems();
+    for (int i = 0; i < items.size(); ++i) {
+        if (items.at(i)->getProduct()->getProductId() == productId) {
+            QString productName = items.at(i)->getProduct()->getName();
+            if (m_currentSale->removeItem(i)) {
+                emit itemRemoved(i);
+                logOperation(QString("移除商品：%1").arg(productName));
+                return true;
+            }
+            break; 
+        }
     }
-    
-    QString productName = m_currentSale->getItems().at(index)->getProduct()->getName();
-    
-    if (m_currentSale->removeItem(index)) {
-        emit itemRemoved(index);
-        logOperation(QString("移除商品：%1").arg(productName));
-        return true;
-    }
-    
-    emit errorOccurred("移除商品失败");
+
+    emit errorOccurred("移除商品失败，未在购物车中找到该商品");
     return false;
 }
 
-bool CheckoutController::updateItemQuantity(int index, int quantity)
+bool CheckoutController::updateItemQuantity(int productId, int quantity)
 {
     if (!m_currentSale) {
         emit errorOccurred("当前没有活动的销售");
         return false;
     }
-    
-    if (index < 0 || index >= m_currentSale->getItems().size()) {
-        emit errorOccurred("无效的商品索引");
-        return false;
-    }
-    
-    auto items = m_currentSale->getItems();
-    Product* product = items.at(index)->getProduct();
-    
-    if (quantity <= 0) {
-        // 数量为0或负数，移除商品
-        return removeItemFromSale(index);
-    }
-    
-    // 检查库存（需要考虑当前购物车中的数量）
-    int currentQuantity = items.at(index)->getQuantity();
-    int additionalQuantity = quantity - currentQuantity;
-    
-    if (additionalQuantity > 0) {
-        if (!checkStock(product, additionalQuantity)) {
-            emit errorOccurred(QString("商品 %1 库存不足")
-                              .arg(product->getName()));
-            return false;
+
+    const auto& items = m_currentSale->getItems();
+    for (int i = 0; i < items.size(); ++i) {
+        if (items.at(i)->getProduct()->getProductId() == productId) {
+            Product* product = items.at(i)->getProduct();
+
+            if (quantity <= 0) {
+                return removeItemFromSale(productId);
+            }
+
+            int currentQuantity = items.at(i)->getQuantity();
+            int additionalQuantity = quantity - currentQuantity;
+
+            if (additionalQuantity > 0) {
+                if (!checkStock(product, additionalQuantity)) {
+                    emit errorOccurred(QString("商品 %1 库存不足").arg(product->getName()));
+                    return false;
+                }
+            }
+
+            if (m_currentSale->updateItemQuantity(i, quantity)) {
+                logOperation(QString("更新商品数量：%1 -> %2").arg(product->getName()).arg(quantity));
+                return true;
+            }
+            break;
         }
     }
-    
-    if (m_currentSale->updateItemQuantity(index, quantity)) {
-        logOperation(QString("更新商品数量：%1 -> %2").arg(product->getName()).arg(quantity));
-        return true;
-    }
-    
-    emit errorOccurred("更新商品数量失败");
+
+    emit errorOccurred("更新商品数量失败，未在购物车中找到该商品");
     return false;
 }
 
@@ -239,38 +242,50 @@ bool CheckoutController::processPayment(const QString& paymentMethod, double amo
 
 bool CheckoutController::completeSale()
 {
+    qDebug() << "CheckoutController::completeSale called, m_currentSale:" << m_currentSale << ", m_databaseManager:" << m_databaseManager << ", m_receiptPrinter:" << (m_receiptPrinter ? m_receiptPrinter.get() : nullptr);
     if (!validateSale()) {
+        qDebug() << "CheckoutController::completeSale validateSale failed";
         return false;
     }
-    
     if (!m_paymentProcessed) {
         emit errorOccurred("支付尚未处理");
+        qDebug() << "CheckoutController::completeSale payment not processed";
         return false;
     }
-    
+    if (!m_currentSale) {
+        emit errorOccurred("当前没有活动的销售");
+        qDebug() << "CheckoutController::completeSale m_currentSale is null";
+        return false;
+    }
+    if (!m_databaseManager) {
+        emit errorOccurred("数据库管理器未初始化");
+        qDebug() << "CheckoutController::completeSale m_databaseManager is null";
+        return false;
+    }
+    if (!m_receiptPrinter) {
+        emit errorOccurred("票据打印器未初始化");
+        qDebug() << "CheckoutController::completeSale m_receiptPrinter is null";
+        return false;
+    }
     // 设置交易状态为已完成
     m_currentSale->setStatus(Sale::Completed);
-    
     // 保存到数据库
     int transactionId = m_databaseManager->saveTransaction(m_currentSale);
+    qDebug() << "CheckoutController::completeSale after saveTransaction, transactionId:" << transactionId;
     if (transactionId < 0) {
         emit errorOccurred("保存交易到数据库失败");
         return false;
     }
-    
     // 打印票据
     if (!m_receiptPrinter->printReceipt(*m_currentSale, m_currentSale->getItems())) {
         qWarning() << "打印票据失败，但交易已保存";
         // 注意：这里不返回false，因为交易已经成功保存
     }
-    
     emit saleCompleted(transactionId);
     logOperation(QString("完成销售，交易ID：%1").arg(transactionId));
-    
     // 重置状态
     m_paymentProcessed = false;
     m_changeAmount = 0.0;
-    
     return true;
 }
 
@@ -368,24 +383,26 @@ bool CheckoutController::validateSale() const
 
 bool CheckoutController::updateInventory()
 {
+    qDebug() << "CheckoutController::updateInventory called, m_currentSale:" << m_currentSale << ", m_databaseManager:" << m_databaseManager;
     if (!m_currentSale) {
+        qDebug() << "CheckoutController::updateInventory m_currentSale is null";
         return false;
     }
-    
+    if (!m_databaseManager) {
+        qDebug() << "CheckoutController::updateInventory m_databaseManager is null";
+        return false;
+    }
     // 更新所有商品的库存
     for (auto* item : m_currentSale->getItems()) {
         Product* product = item->getProduct();
         int newStock = product->getStockQuantity() - item->getQuantity();
-        
         if (!m_databaseManager->updateProductStock(product->getProductId(), newStock)) {
             qCritical() << "更新商品库存失败：" << product->getName();
             return false;
         }
-        
         // 更新内存中的商品对象
         product->setStockQuantity(newStock);
     }
-    
     return true;
 }
 

@@ -62,18 +62,18 @@ public:
 
     /**
      * @brief 从销售中移除商品
-     * @param index 商品在列表中的索引
+     * @param productId 商品ID
      * @return 如果移除成功返回true
      */
-    bool removeItemFromSale(int index);
+    bool removeItemFromSale(int productId);
 
     /**
      * @brief 更新销售项目数量
-     * @param index 项目索引
+     * @param productId 商品ID
      * @param quantity 新数量
      * @return 如果更新成功返回true
      */
-    bool updateItemQuantity(int index, int quantity);
+    bool updateItemQuantity(int productId, int quantity);
 
     /**
      * @brief 应用折扣

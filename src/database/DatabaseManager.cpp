@@ -80,6 +80,11 @@ void DatabaseManager::closeDatabase()
         emit connectionStatusChanged(false);
         qDebug() << "数据库连接已关闭";
     }
+    
+    // 移除数据库连接，防止测试中出现 "connection is still in use" 警告
+    if (QSqlDatabase::contains(m_db.connectionName())) {
+        QSqlDatabase::removeDatabase(m_db.connectionName());
+    }
 }
 
 bool DatabaseManager::isConnected() const
@@ -285,12 +290,27 @@ std::unique_ptr<Product> DatabaseManager::getProductByBarcode(const QString& bar
     return nullptr;
 }
 
-QList<std::unique_ptr<Product>> DatabaseManager::getAllProducts()
+QList<Product*> DatabaseManager::getAllProducts()
 {
-    QList<std::unique_ptr<Product>> products;
-    // 暂时返回空列表，避免编译错误
-    // 实际实现需要解决QList<unique_ptr>的copy问题
-    return products;
+    QList<Product*> result;
+    if (!isConnected()) {
+        return result;
+    }
+    QSqlQuery query(m_db);
+    if (query.exec("SELECT id, barcode, name, description, price, stock, category FROM Products")) {
+        while (query.next()) {
+            Product* product = new Product();
+            product->setProductId(query.value(0).toInt());
+            product->setBarcode(query.value(1).toString());
+            product->setName(query.value(2).toString());
+            product->setDescription(query.value(3).toString());
+            product->setPrice(query.value(4).toDouble());
+            product->setStockQuantity(query.value(5).toInt());
+            product->setCategory(query.value(6).toString());
+            result.append(product);
+        }
+    }
+    return result;
 }
 
 bool DatabaseManager::deleteProduct(int productId)
@@ -398,7 +418,10 @@ int DatabaseManager::saveTransaction(Sale* sale)
             VALUES (?, ?, ?, ?, ?, ?)
         )");
         
-        int customerId = sale->getCustomer() ? sale->getCustomer()->getCustomerId() : -1;
+        int customerId = -1;
+        if (sale->getCustomer()) {
+            customerId = sale->getCustomer()->getCustomerId();
+        }
         query.addBindValue(customerId > 0 ? customerId : QVariant());
         query.addBindValue(sale->getTotalAmount());
         query.addBindValue(sale->getDiscountAmount());

@@ -1,0 +1,42 @@
+<RCC>
+    <qresource prefix="/">
+        <file>about.png</file>
+        <file>add_product.png</file>
+        <file>ai_recommendation.png</file>
+        <file>app_icon.png</file>
+        <file>barcode_scan.png</file>
+        <file>camera.png</file>
+        <file>card.png</file>
+        <file>cash.png</file>
+        <file>connected.png</file>
+        <file>database.png</file>
+        <file>delete_product.png</file>
+        <file>disconnected.png</file>
+        <file>discount.png</file>
+        <file>edit_product.png</file>
+        <file>error.png</file>
+        <file>exit.png</file>
+        <file>export_products.png</file>
+        <file>help.png</file>
+        <file>import_products.png</file>
+        <file>logo.png</file>
+        <file>mobile_pay.png</file>
+        <file>new_sale.png</file>
+        <file>no_image.png</file>
+        <file>popular.png</file>
+        <file>print_receipt.png</file>
+        <file>product_placeholder.png</file>
+        <file>refresh.png</file>
+        <file>report.png</file>
+        <file>save_sale.png</file>
+        <file>scan_start.png</file>
+        <file>scan_stop.png</file>
+        <file>search_product.png</file>
+        <file>settings.png</file>
+        <file>splash.png</file>
+        <file>success.png</file>
+        <file>trending.png</file>
+        <file>warning.png</file>
+
+    </qresource>
+</RCC>

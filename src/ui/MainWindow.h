@@ -8,6 +8,7 @@
 #include <QTableView>
 #include <QStandardItemModel>
 #include <memory>
+#include <QCloseEvent>
 
 QT_BEGIN_NAMESPACE
 class QVBoxLayout;
@@ -222,10 +223,13 @@ private:
     QLabel* m_timeLabel;
     QLabel* m_userLabel;
     QTimer* m_statusTimer;
-    
-    // 当前数据
-    Sale* m_currentSale;
-    QString m_currentUser;
+
+    // 退出标志
+    bool m_isClosing = false;
+
+    // 当前销售和当前用户
+    Sale* m_currentSale = nullptr;
+    QString m_currentUser = QStringLiteral("收银员");
 };
 
 #endif // MAINWINDOW_H

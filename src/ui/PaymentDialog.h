@@ -15,7 +15,7 @@
 #include <QTimer>
 #include <QProgressBar>
 #include <QMessageBox>
-// #include <QSoundEffect>
+#include <QSoundEffect>
 
 // 前向声明
 class QSoundEffect;
