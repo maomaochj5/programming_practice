@@ -532,18 +532,22 @@ void MainWindow::updateTotals()
 
 void MainWindow::onProductDoubleClicked(const QModelIndex& index)
 {
-    qDebug() << "onProductDoubleClicked triggered, index:" << index;
-    if (!index.isValid()) {
+    if (!index.isValid() || !m_currentSale) {
         return;
     }
-    
-    // 从商品列表获取选中的商品名称
-    if (ui->productListWidget && ui->productListWidget->currentItem()) {
-        QString productName = ui->productListWidget->currentItem()->text();
-        auto product = m_productManager->getProductByName(productName);
-        if (product) {
-            qDebug() << "双击添加商品，条码:" << product->getBarcode();
-            onBarcodeScanned(product->getBarcode());
+
+    int row = index.row();
+    if (row >= 0 && row < m_currentSale->getItems().size()) {
+        SaleItem* item = m_currentSale->getItems().at(row);
+        Product* product = item->getProduct();
+        
+        bool ok;
+        int newQuantity = QInputDialog::getInt(this, "修改商品数量",
+            QString("请输入“%1”的新数量:").arg(product->getName()),
+            item->getQuantity(), 1, product->getStockQuantity(), 1, &ok);
+
+        if (ok && newQuantity != item->getQuantity()) {
+            m_checkoutController->updateItemQuantity(product->getProductId(), newQuantity);
         }
     }
 }
