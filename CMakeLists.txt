@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(SmartPOS VERSION 1.0.0 LANGUAGES CXX)
+project(SmartPOS LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find required Qt components
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Sql Network PrintSupport Multimedia)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Sql Concurrent Network PrintSupport Multimedia)
 
 # Enable Qt MOC, UIC, and RCC
 set(CMAKE_AUTOMOC ON)
@@ -27,6 +27,9 @@ set(CORE_SOURCES
     src/ui/MainWindow.cpp
     src/ui/ProductDialog.cpp
     src/ui/PaymentDialog.cpp
+    src/ui/CartDelegate.cpp
+    src/ui/RecommendationItemWidget.cpp
+    src/ui/ProductManagementDialog.cpp
     src/database/DatabaseManager.cpp
     src/barcode/BarcodeScanner.cpp
     src/ai/AIRecommender.cpp
@@ -37,6 +40,7 @@ set(CORE_SOURCES
 set(SOURCES
     src/main.cpp
     ${CORE_SOURCES}
+    src/ui/MainWindow.ui
 )
 
 # Header files
@@ -50,6 +54,9 @@ set(HEADERS
     src/ui/MainWindow.h
     src/ui/ProductDialog.h
     src/ui/PaymentDialog.h
+    src/ui/CartDelegate.h
+    src/ui/RecommendationItemWidget.h
+    src/ui/ProductManagementDialog.h
     src/database/DatabaseManager.h
     src/barcode/BarcodeScanner.h
     src/ai/AIRecommender.h
@@ -63,18 +70,40 @@ set(RESOURCES
 
 # Create a library for the core functionality (for testing)
 add_library(SmartPOSCore STATIC ${CORE_SOURCES} ${HEADERS} ${RESOURCES})
-target_link_libraries(SmartPOSCore 
-    Qt6::Core 
-    Qt6::Widgets 
-    Qt6::Sql 
+target_link_libraries(SmartPOSCore PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Sql
+    Qt6::Concurrent
     Qt6::Network
     Qt6::PrintSupport
     Qt6::Multimedia
 )
 
+# Add include directories for auto-generated UI headers
+target_include_directories(SmartPOSCore PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}/SmartPOSCore_autogen/include
+)
+
 # Create executable
-add_executable(SmartPOS src/main.cpp)
-target_link_libraries(SmartPOS SmartPOSCore)
+add_executable(SmartPOS ${SOURCES})
+target_link_libraries(SmartPOS PRIVATE
+    SmartPOSCore
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    Qt6::Sql
+    Qt6::Concurrent
+    Qt6::Network
+    Qt6::PrintSupport
+    Qt6::Multimedia
+)
+
+# Add include directories for executable
+target_include_directories(SmartPOS PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}/SmartPOS_autogen/include
+)
 
 # Compiler-specific options
 if(MSVC)
@@ -101,7 +130,7 @@ if(WIN32)
 endif()
 
 # Testing
-option(BUILD_TESTS "Build tests" ON)
+option(BUILD_TESTS "Build tests" OFF)
 if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)

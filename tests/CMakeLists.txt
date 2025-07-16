@@ -28,5 +28,10 @@ target_link_libraries(DebugGUITest
     SmartPOSCore
 )
 
+# Add include directories for auto-generated UI headers
+target_include_directories(DebugGUITest PRIVATE
+    ${CMAKE_BINARY_DIR}/SmartPOSCore_autogen/include
+)
+
 # 添加GUI调试测试到CTest
 add_test(NAME DebugGUITest COMMAND DebugGUITest)

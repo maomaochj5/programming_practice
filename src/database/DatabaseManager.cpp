@@ -8,6 +8,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QStandardPaths>
+#include <QtConcurrent>
 
 QMutex DatabaseManager::s_mutex;
 
@@ -33,31 +34,24 @@ bool DatabaseManager::openDatabase(const QString& path)
     QMutexLocker locker(&s_mutex);
     
     if (m_connected) {
-        qDebug() << "数据库已经连接";
         return true;
     }
     
-    // 创建数据库目录（如果不存在）
     QDir dir(QFileInfo(path).absoluteDir());
     if (!dir.exists()) {
         dir.mkpath(".");
     }
     
-    m_db = QSqlDatabase::addDatabase("QSQLITE");
+    m_db = QSqlDatabase::addDatabase("QSQLITE", "mainConnection");
     m_db.setDatabaseName(path);
     
     if (!m_db.open()) {
-        QString errorMsg = QString("无法打开数据库: %1").arg(m_db.lastError().text());
-        qCritical() << errorMsg;
-        emit databaseError(errorMsg);
+        logError("openDatabase", m_db.lastError());
         return false;
     }
     
-    // 启用外键约束
-    QSqlQuery query(m_db);
-    query.exec("PRAGMA foreign_keys = ON");
+    m_db.exec("PRAGMA foreign_keys = ON;");
     
-    // 初始化表结构
     if (!initializeTables()) {
         closeDatabase();
         return false;
@@ -65,8 +59,7 @@ bool DatabaseManager::openDatabase(const QString& path)
     
     m_connected = true;
     emit connectionStatusChanged(true);
-    
-    qDebug() << "数据库连接成功:" << path;
+    qDebug() << "Database connection successful:" << path;
     return true;
 }
 
@@ -78,27 +71,22 @@ void DatabaseManager::closeDatabase()
         m_db.close();
         m_connected = false;
         emit connectionStatusChanged(false);
-        qDebug() << "数据库连接已关闭";
+        qDebug() << "Database connection closed.";
     }
     
-    // 移除数据库连接，防止测试中出现 "connection is still in use" 警告
-    if (QSqlDatabase::contains(m_db.connectionName())) {
-        QSqlDatabase::removeDatabase(m_db.connectionName());
-    }
+    QSqlDatabase::removeDatabase("mainConnection");
 }
 
 bool DatabaseManager::isConnected() const
 {
-    return m_connected && m_db.isOpen();
+    return m_connected;
 }
 
 bool DatabaseManager::initializeTables()
 {
     QSqlQuery query(m_db);
-    
-    // 创建商品表
-    QString createProductsTable = R"(
-        CREATE TABLE IF NOT EXISTS Products (
+    const char* tables[] = {
+        R"(CREATE TABLE IF NOT EXISTS Products (
             product_id INTEGER PRIMARY KEY AUTOINCREMENT,
             barcode TEXT UNIQUE NOT NULL,
             name TEXT NOT NULL,
@@ -106,36 +94,19 @@ bool DatabaseManager::initializeTables()
             price REAL NOT NULL CHECK(price >= 0),
             stock_quantity INTEGER NOT NULL CHECK(stock_quantity >= 0),
             category TEXT,
+            image_path TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    )";
-    
-    if (!query.exec(createProductsTable)) {
-        logError("创建商品表", query.lastError());
-        return false;
-    }
-    
-    // 创建客户表
-    QString createCustomersTable = R"(
-        CREATE TABLE IF NOT EXISTS Customers (
+        ))",
+        R"(CREATE TABLE IF NOT EXISTS Customers (
             customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             contact_info TEXT,
             loyalty_points INTEGER DEFAULT 0 CHECK(loyalty_points >= 0),
             registration_date DATETIME DEFAULT CURRENT_TIMESTAMP,
             last_visit DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    )";
-    
-    if (!query.exec(createCustomersTable)) {
-        logError("创建客户表", query.lastError());
-        return false;
-    }
-    
-    // 创建交易表
-    QString createTransactionsTable = R"(
-        CREATE TABLE IF NOT EXISTS Transactions (
+        ))",
+        R"(CREATE TABLE IF NOT EXISTS Transactions (
             transaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
             customer_id INTEGER,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -145,17 +116,8 @@ bool DatabaseManager::initializeTables()
             status INTEGER DEFAULT 0,
             cashier_name TEXT,
             FOREIGN KEY (customer_id) REFERENCES Customers (customer_id)
-        )
-    )";
-    
-    if (!query.exec(createTransactionsTable)) {
-        logError("创建交易表", query.lastError());
-        return false;
-    }
-    
-    // 创建交易项目表
-    QString createTransactionItemsTable = R"(
-        CREATE TABLE IF NOT EXISTS TransactionItems (
+        ))",
+        R"(CREATE TABLE IF NOT EXISTS TransactionItems (
             transaction_item_id INTEGER PRIMARY KEY AUTOINCREMENT,
             transaction_id INTEGER NOT NULL,
             product_id INTEGER NOT NULL,
@@ -164,371 +126,318 @@ bool DatabaseManager::initializeTables()
             subtotal REAL NOT NULL CHECK(subtotal >= 0),
             FOREIGN KEY (transaction_id) REFERENCES Transactions (transaction_id) ON DELETE CASCADE,
             FOREIGN KEY (product_id) REFERENCES Products (product_id)
-        )
-    )";
-    
-    if (!query.exec(createTransactionItemsTable)) {
-        logError("创建交易项目表", query.lastError());
-        return false;
-    }
-    
-    // 创建索引以提高查询性能
-    query.exec("CREATE INDEX IF NOT EXISTS idx_products_barcode ON Products (barcode)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_transactions_customer ON Transactions (customer_id)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_transactions_timestamp ON Transactions (timestamp)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction ON TransactionItems (transaction_id)");
-    query.exec("CREATE INDEX IF NOT EXISTS idx_transaction_items_product ON TransactionItems (product_id)");
-    
-    qDebug() << "数据库表初始化完成";
-    return true;
-}
+        ))"
+    };
 
-bool DatabaseManager::saveProduct(Product* product)
-{
-    if (!product || !product->isValid()) {
-        qWarning() << "尝试保存无效的商品";
-        return false;
+    for (const char* tableSql : tables) {
+        if (!query.exec(tableSql)) {
+            logError("initializeTables", query.lastError());
+            return false;
+        }
     }
+
+    const char* indices[] = {
+        "CREATE INDEX IF NOT EXISTS idx_products_barcode ON Products (barcode)",
+        "CREATE INDEX IF NOT EXISTS idx_transactions_customer ON Transactions (customer_id)",
+        "CREATE INDEX IF NOT EXISTS idx_transactions_timestamp ON Transactions (timestamp)",
+    };
     
-    QSqlQuery query(m_db);
-    
-    if (product->getProductId() <= 0) {
-        // 新增商品
-        query.prepare(R"(
-            INSERT INTO Products (barcode, name, description, price, stock_quantity, category)
-            VALUES (?, ?, ?, ?, ?, ?)
-        )");
-        query.addBindValue(product->getBarcode());
-        query.addBindValue(product->getName());
-        query.addBindValue(product->getDescription());
-        query.addBindValue(product->getPrice());
-        query.addBindValue(product->getStockQuantity());
-        query.addBindValue(product->getCategory());
-        
-        if (!executeQuery(query)) {
-            return false;
-        }
-        
-        // 设置新生成的ID
-        product->setProductId(query.lastInsertId().toInt());
-        qDebug() << "新增商品成功，ID:" << product->getProductId();
-    } else {
-        // 更新商品
-        query.prepare(R"(
-            UPDATE Products 
-            SET barcode = ?, name = ?, description = ?, price = ?, 
-                stock_quantity = ?, category = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE product_id = ?
-        )");
-        query.addBindValue(product->getBarcode());
-        query.addBindValue(product->getName());
-        query.addBindValue(product->getDescription());
-        query.addBindValue(product->getPrice());
-        query.addBindValue(product->getStockQuantity());
-        query.addBindValue(product->getCategory());
-        query.addBindValue(product->getProductId());
-        
-        if (!executeQuery(query)) {
-            return false;
-        }
-        
-        qDebug() << "更新商品成功，ID:" << product->getProductId();
+    for (const char* indexSql : indices) {
+        query.exec(indexSql);
     }
     
     return true;
 }
 
-std::unique_ptr<Product> DatabaseManager::getProduct(int productId)
+void DatabaseManager::saveProduct(const Product& product)
 {
-    QSqlQuery query(m_db);
-    query.prepare("SELECT * FROM Products WHERE product_id = ?");
-    query.addBindValue(productId);
-    
-    if (!executeQuery(query)) {
-        return nullptr;
-    }
-    
-    if (query.next()) {
-        auto product = std::make_unique<Product>(
-            query.value("product_id").toInt(),
-            query.value("barcode").toString(),
-            query.value("name").toString(),
-            query.value("description").toString(),
-            query.value("price").toDouble(),
-            query.value("stock_quantity").toInt(),
-            query.value("category").toString()
-        );
-        return product;
-    }
-    
-    return nullptr;
+    auto watcher = new QFutureWatcher<QPair<bool, int>>(this);
+    connect(watcher, &QFutureWatcher<QPair<bool, int>>::finished, this, &DatabaseManager::handleProductSaved);
+
+    QFuture<QPair<bool, int>> future = QtConcurrent::run([this, product]() {
+        QMutexLocker locker(&s_mutex);
+        if (!m_connected) return qMakePair(false, product.getProductId());
+
+        QSqlQuery query(m_db);
+        bool success;
+        int finalId = product.getProductId();
+
+        if (product.getProductId() <= 0) {
+            query.prepare(R"(
+                INSERT INTO Products (barcode, name, description, price, stock_quantity, category, image_path)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            )");
+            query.addBindValue(product.getBarcode());
+            query.addBindValue(product.getName());
+            query.addBindValue(product.getDescription());
+            query.addBindValue(product.getPrice());
+            query.addBindValue(product.getStockQuantity());
+            query.addBindValue(product.getCategory());
+            query.addBindValue(product.getImagePath());
+            success = query.exec();
+            if (success) {
+                finalId = query.lastInsertId().toInt();
+            }
+        } else {
+            query.prepare(R"(
+                UPDATE Products 
+                SET barcode = ?, name = ?, description = ?, price = ?, 
+                    stock_quantity = ?, category = ?, image_path = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE product_id = ?
+            )");
+            query.addBindValue(product.getBarcode());
+            query.addBindValue(product.getName());
+            query.addBindValue(product.getDescription());
+            query.addBindValue(product.getPrice());
+            query.addBindValue(product.getStockQuantity());
+            query.addBindValue(product.getCategory());
+            query.addBindValue(product.getImagePath());
+            query.addBindValue(product.getProductId());
+            success = query.exec();
+        }
+
+        if (!success) {
+            logError("saveProduct_worker", query.lastError());
+        }
+        return qMakePair(success, finalId);
+    });
+
+    watcher->setFuture(future);
 }
 
-std::unique_ptr<Product> DatabaseManager::getProductByBarcode(const QString& barcode)
+void DatabaseManager::deleteProduct(int productId)
 {
-    QSqlQuery query(m_db);
-    query.prepare("SELECT * FROM Products WHERE barcode = ?");
-    query.addBindValue(barcode);
-    
-    if (!executeQuery(query)) {
-        return nullptr;
-    }
-    
-    if (query.next()) {
-        auto product = std::make_unique<Product>(
-            query.value("product_id").toInt(),
-            query.value("barcode").toString(),
-            query.value("name").toString(),
-            query.value("description").toString(),
-            query.value("price").toDouble(),
-            query.value("stock_quantity").toInt(),
-            query.value("category").toString()
-        );
-        return product;
-    }
-    
-    return nullptr;
+    auto watcher = new QFutureWatcher<bool>(this);
+    connect(watcher, &QFutureWatcher<bool>::finished, this, [this, watcher, productId]() {
+        handleProductDeleted(watcher->result(), productId);
+        watcher->deleteLater();
+    });
+
+    QFuture<bool> future = QtConcurrent::run([this, productId]() {
+        QMutexLocker locker(&s_mutex);
+        if (!m_connected) return false;
+
+        QSqlQuery query(m_db);
+        query.prepare("DELETE FROM Products WHERE product_id = ?");
+        query.addBindValue(productId);
+        
+        if (!query.exec()) {
+            logError("deleteProduct_worker", query.lastError());
+            return false;
+        }
+        return true;
+    });
+
+    watcher->setFuture(future);
 }
 
-QList<Product*> DatabaseManager::getAllProducts()
+void DatabaseManager::getProductByBarcode(const QString& barcode)
 {
-    QList<Product*> result;
-    if (!isConnected()) {
-        return result;
-    }
-    QSqlQuery query(m_db);
-    if (query.exec("SELECT id, barcode, name, description, price, stock, category FROM Products")) {
+    auto watcher = new QFutureWatcher<Product*>(this);
+    connect(watcher, &QFutureWatcher<Product*>::finished, this, [this, watcher, barcode]() {
+        handleProductReadByBarcode(watcher->result(), barcode);
+        watcher->deleteLater();
+    });
+
+    QFuture<Product*> future = QtConcurrent::run([this, barcode]() {
+        QMutexLocker locker(&s_mutex);
+        if (!m_connected) return (Product*)nullptr;
+
+        QSqlQuery query(m_db);
+        query.prepare("SELECT * FROM Products WHERE barcode = ?");
+        query.addBindValue(barcode);
+
+        if (!query.exec()) {
+            logError("getProductByBarcode_worker", query.lastError());
+            return (Product*)nullptr;
+        }
+
+        if (query.next()) {
+            Product* product = new Product();
+            product->setProductId(query.value("product_id").toInt());
+            product->setBarcode(query.value("barcode").toString());
+            product->setName(query.value("name").toString());
+            product->setDescription(query.value("description").toString());
+            product->setPrice(query.value("price").toDouble());
+            product->setStockQuantity(query.value("stock_quantity").toInt());
+            product->setCategory(query.value("category").toString());
+            product->setImagePath(query.value("image_path").toString());
+            return product;
+        }
+
+        return (Product*)nullptr;
+    });
+
+    watcher->setFuture(future);
+}
+
+void DatabaseManager::getAllProducts()
+{
+    auto watcher = new QFutureWatcher<QList<Product*>>(this);
+    connect(watcher, &QFutureWatcher<QList<Product*>>::finished, this, &DatabaseManager::handleProductsRead);
+
+    QFuture<QList<Product*>> future = QtConcurrent::run([this]() {
+        QMutexLocker locker(&s_mutex);
+        QList<Product*> products;
+        if (!m_connected) return products;
+        
+        QSqlQuery query(m_db);
+        query.prepare("SELECT * FROM Products ORDER BY name ASC");
+
+        if (!query.exec()) {
+            logError("getAllProducts_worker", query.lastError());
+            return products;
+        }
+
         while (query.next()) {
             Product* product = new Product();
-            product->setProductId(query.value(0).toInt());
-            product->setBarcode(query.value(1).toString());
-            product->setName(query.value(2).toString());
-            product->setDescription(query.value(3).toString());
-            product->setPrice(query.value(4).toDouble());
-            product->setStockQuantity(query.value(5).toInt());
-            product->setCategory(query.value(6).toString());
-            result.append(product);
+            product->setProductId(query.value("product_id").toInt());
+            product->setBarcode(query.value("barcode").toString());
+            product->setName(query.value("name").toString());
+            product->setDescription(query.value("description").toString());
+            product->setPrice(query.value("price").toDouble());
+            product->setStockQuantity(query.value("stock_quantity").toInt());
+            product->setCategory(query.value("category").toString());
+            product->setImagePath(query.value("image_path").toString());
+            products.append(product);
         }
-    }
-    return result;
+        return products;
+    });
+
+    watcher->setFuture(future);
 }
 
-bool DatabaseManager::deleteProduct(int productId)
+int DatabaseManager::saveTransaction(Sale* sale)
 {
-    QSqlQuery query(m_db);
-    query.prepare("DELETE FROM Products WHERE product_id = ?");
-    query.addBindValue(productId);
+    QMutexLocker locker(&s_mutex);
+    if (!sale || sale->isEmpty() || !m_connected) return -1;
     
-    if (!executeQuery(query)) {
-        return false;
+    if (!m_db.transaction()) {
+        logError("saveTransaction_begin", m_db.lastError());
+        return -1;
     }
     
-    qDebug() << "删除商品成功，ID:" << productId;
-    return true;
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        INSERT INTO Transactions (customer_id, total_amount, discount_amount, payment_method, status, cashier_name)
+        VALUES (?, ?, ?, ?, ?, ?)
+    )");
+    
+    query.addBindValue(sale->getCustomer() ? QVariant(sale->getCustomer()->getCustomerId()) : QVariant());
+    query.addBindValue(sale->getTotalAmount());
+    query.addBindValue(sale->getDiscountAmount());
+    query.addBindValue(Sale::paymentMethodToString(sale->getPaymentMethod()));
+    query.addBindValue(static_cast<int>(sale->getStatus()));
+    query.addBindValue(sale->getCashierName());
+    
+    if (!query.exec()) {
+        logError("saveTransaction_main", query.lastError());
+        m_db.rollback();
+        return -1;
+    }
+    
+    int transactionId = query.lastInsertId().toInt();
+    
+    for (SaleItem* item : sale->getItems()) {
+        query.prepare(R"(
+            INSERT INTO TransactionItems (transaction_id, product_id, quantity, unit_price, subtotal)
+            VALUES (?, ?, ?, ?, ?)
+        )");
+        query.addBindValue(transactionId);
+        query.addBindValue(item->getProduct()->getProductId());
+        query.addBindValue(item->getQuantity());
+        query.addBindValue(item->getUnitPrice());
+        query.addBindValue(item->getSubtotal());
+        
+        if (!query.exec()) {
+            logError("saveTransaction_item", query.lastError());
+            m_db.rollback();
+            return -1;
+        }
+        
+        if (!updateProductStock(item->getProduct()->getProductId(), item->getProduct()->getStockQuantity() - item->getQuantity())) {
+            logError("saveTransaction_stockUpdate", m_db.lastError());
+            m_db.rollback();
+            return -1;
+        }
+    }
+    
+    if (!m_db.commit()) {
+        logError("saveTransaction_commit", m_db.lastError());
+        m_db.rollback();
+        return -1;
+    }
+    
+    sale->setTransactionId(transactionId);
+    return transactionId;
 }
 
 bool DatabaseManager::updateProductStock(int productId, int newStock)
 {
     QSqlQuery query(m_db);
-    query.prepare(R"(
-        UPDATE Products 
-        SET stock_quantity = ?, updated_at = CURRENT_TIMESTAMP 
-        WHERE product_id = ?
-    )");
+    query.prepare("UPDATE Products SET stock_quantity = ? WHERE product_id = ?");
     query.addBindValue(newStock);
     query.addBindValue(productId);
-    
-    if (!executeQuery(query)) {
-        return false;
-    }
-    
-    qDebug() << "更新商品库存成功，ID:" << productId << "新库存:" << newStock;
-    return true;
-}
-
-bool DatabaseManager::saveCustomer(Customer* customer)
-{
-    if (!customer || !customer->isValid()) {
-        qWarning() << "尝试保存无效的客户";
-        return false;
-    }
-    
-    QSqlQuery query(m_db);
-    
-    if (customer->getCustomerId() <= 0) {
-        // 新增客户
-        query.prepare(R"(
-            INSERT INTO Customers (name, contact_info, loyalty_points, registration_date, last_visit)
-            VALUES (?, ?, ?, ?, ?)
-        )");
-        query.addBindValue(customer->getName());
-        query.addBindValue(customer->getContactInfo());
-        query.addBindValue(customer->getLoyaltyPoints());
-        query.addBindValue(customer->getRegistrationDate());
-        query.addBindValue(customer->getLastVisit());
-        
-        if (!executeQuery(query)) {
-            return false;
-        }
-        
-        customer->setCustomerId(query.lastInsertId().toInt());
-        qDebug() << "新增客户成功，ID:" << customer->getCustomerId();
-    } else {
-        // 更新客户
-        query.prepare(R"(
-            UPDATE Customers 
-            SET name = ?, contact_info = ?, loyalty_points = ?, last_visit = ?
-            WHERE customer_id = ?
-        )");
-        query.addBindValue(customer->getName());
-        query.addBindValue(customer->getContactInfo());
-        query.addBindValue(customer->getLoyaltyPoints());
-        query.addBindValue(customer->getLastVisit());
-        query.addBindValue(customer->getCustomerId());
-        
-        if (!executeQuery(query)) {
-            return false;
-        }
-        
-        qDebug() << "更新客户成功，ID:" << customer->getCustomerId();
-    }
-    
-    return true;
-}
-
-int DatabaseManager::saveTransaction(Sale* sale)
-{
-    if (!sale || sale->isEmpty()) {
-        qWarning() << "尝试保存无效的交易";
-        return -1;
-    }
-    
-    if (!m_db.transaction()) {
-        logError("开始事务", m_db.lastError());
-        return -1;
-    }
-    
-    QSqlQuery query(m_db);
-    
-    try {
-        // 保存交易主记录
-        query.prepare(R"(
-            INSERT INTO Transactions (customer_id, total_amount, discount_amount, 
-                                    payment_method, status, cashier_name)
-            VALUES (?, ?, ?, ?, ?, ?)
-        )");
-        
-        int customerId = -1;
-        if (sale->getCustomer()) {
-            customerId = sale->getCustomer()->getCustomerId();
-        }
-        query.addBindValue(customerId > 0 ? customerId : QVariant());
-        query.addBindValue(sale->getTotalAmount());
-        query.addBindValue(sale->getDiscountAmount());
-        query.addBindValue(Sale::paymentMethodToString(sale->getPaymentMethod()));
-        query.addBindValue(static_cast<int>(sale->getStatus()));
-        query.addBindValue(sale->getCashierName());
-        
-        if (!executeQuery(query)) {
-            throw std::runtime_error("保存交易主记录失败");
-        }
-        
-        int transactionId = query.lastInsertId().toInt();
-        
-        // 保存交易项目
-        for (SaleItem* item : sale->getItems()) {
-            if (!item->isValid()) {
-                continue;
-            }
-            
-            int productId = item->getProduct()->getProductId();
-            if (productId <= 0) {
-                throw std::runtime_error("商品ID无效，无法保存交易项目");
-            }
-            
-            // 验证商品是否存在于数据库中
-            QSqlQuery checkQuery(m_db);
-            checkQuery.prepare("SELECT COUNT(*) FROM Products WHERE product_id = ?");
-            checkQuery.addBindValue(productId);
-            
-            if (!executeQuery(checkQuery) || !checkQuery.next() || checkQuery.value(0).toInt() == 0) {
-                throw std::runtime_error(QString("商品ID %1 不存在于数据库中").arg(productId).toStdString());
-            }
-            
-            query.prepare(R"(
-                INSERT INTO TransactionItems (transaction_id, product_id, quantity, unit_price, subtotal)
-                VALUES (?, ?, ?, ?, ?)
-            )");
-            query.addBindValue(transactionId);
-            query.addBindValue(productId);
-            query.addBindValue(item->getQuantity());
-            query.addBindValue(item->getUnitPrice());
-            query.addBindValue(item->getSubtotal());
-            
-            if (!executeQuery(query)) {
-                throw std::runtime_error("保存交易项目失败");
-            }
-            
-            // 更新商品库存
-            int newStock = item->getProduct()->getStockQuantity() - item->getQuantity();
-            if (!updateProductStock(productId, newStock)) {
-                throw std::runtime_error("更新商品库存失败");
-            }
-            
-            // 同步内存中的库存数量
-            item->getProduct()->setStockQuantity(newStock);
-        }
-        
-        // 提交事务
-        if (!m_db.commit()) {
-            throw std::runtime_error("提交事务失败");
-        }
-        
-        sale->setTransactionId(transactionId);
-        qDebug() << "保存交易成功，ID:" << transactionId;
-        return transactionId;
-        
-    } catch (const std::exception& e) {
-        m_db.rollback();
-        qCritical() << "保存交易失败:" << e.what();
-        return -1;
-    }
-}
-
-QHash<int, int> DatabaseManager::getProductSalesStats(int days)
-{
-    QHash<int, int> stats;
-    
-    // 简化实现：返回空的统计数据，避免编译错误
-    // TODO: 实现真实的销售统计查询
-    qDebug() << "DatabaseManager::getProductSalesStats called for" << days << "days (returning empty stats)";
-    
-    return stats;
+    return query.exec();
 }
 
 QList<int> DatabaseManager::getPopularProducts(int limit, int days)
 {
-    QList<int> popularProducts;
-    
-    // 简化实现：返回空的热门商品列表，避免编译错误
-    // TODO: 实现真实的热门商品查询
-    qDebug() << "DatabaseManager::getPopularProducts called with limit" << limit << "days" << days << "(returning empty list)";
-    
-    return popularProducts;
+    // TODO: Implement this properly
+    Q_UNUSED(limit);
+    Q_UNUSED(days);
+    return {};
 }
 
-bool DatabaseManager::executeQuery(QSqlQuery& query)
+QHash<int, int> DatabaseManager::getProductSalesStats(int days)
 {
-    if (!query.exec()) {
-        logError("执行查询", query.lastError());
-        return false;
-    }
-    return true;
+    // TODO: Implement this properly
+    Q_UNUSED(days);
+    return {};
 }
 
 void DatabaseManager::logError(const QString& context, const QSqlError& error)
 {
     QString errorMsg = QString("%1: %2").arg(context, error.text());
-    qCritical() << errorMsg;
+    qCritical() << "Database Error -" << errorMsg;
     emit databaseError(errorMsg);
 }
+
+void DatabaseManager::handleProductsRead()
+{
+    auto* watcher = static_cast<QFutureWatcher<QList<Product*>>*>(sender());
+    if (!watcher) return;
+    emit productsRead(watcher->result());
+    watcher->deleteLater();
+}
+
+void DatabaseManager::handleProductReadByBarcode(Product* product, const QString& barcode)
+{
+    emit productReadByBarcode(product, barcode);
+}
+
+void DatabaseManager::handleProductSaved()
+{
+    auto* watcher = static_cast<QFutureWatcher<QPair<bool, int>>*>(sender());
+    if (!watcher) return;
+    auto result = watcher->result();
+    emit productSaved(result.first, result.second);
+    watcher->deleteLater();
+}
+
+void DatabaseManager::handleProductDeleted(bool success, int productId)
+{
+    emit productDeleted(success, productId);
+}
+
+// Synchronous methods for contexts that require it (e.g., exiting)
+// These are not yet implemented as they are not currently required by the async flow.
+std::unique_ptr<Product> DatabaseManager::getProduct(int productId) { return nullptr; }
+bool DatabaseManager::saveCustomer(Customer* customer) { return false; }
+std::unique_ptr<Customer> DatabaseManager::getCustomer(int customerId) { return nullptr; }
+QList<std::unique_ptr<Customer>> DatabaseManager::getAllCustomers() { return {}; }
+bool DatabaseManager::deleteCustomer(int customerId) { return false; }
+std::unique_ptr<Sale> DatabaseManager::getTransaction(int transactionId) { return nullptr; }
+QList<std::unique_ptr<Sale>> DatabaseManager::getCustomerTransactions(int customerId, int limit) { return {}; }
+QList<std::unique_ptr<Sale>> DatabaseManager::getTransactionsByDateRange(const QDateTime& startDate, const QDateTime& endDate) { return {}; }
+double DatabaseManager::getRevenueStats(int days) { return 0.0; }

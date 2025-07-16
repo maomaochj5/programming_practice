@@ -27,7 +27,7 @@ ProductDialog::ProductDialog(const Product* product, QWidget *parent)
     setupValidators();
     setupConnections();
     if (product) {
-        setProduct(product);
+    setProduct(product);
     }
     validateInput(); // 初始验证
     resize(600, 700);
@@ -40,6 +40,9 @@ ProductDialog::~ProductDialog()
 
 void ProductDialog::setupUI()
 {
+    setWindowTitle(m_product.isValid() ? "编辑商品" : "添加商品");
+    setMinimumWidth(400);
+
     qDebug() << "ProductDialog::setupUI 开始";
     auto *mainLayout = new QVBoxLayout(this);
 
@@ -111,7 +114,6 @@ void ProductDialog::setupUI()
 
     m_imagePreview = new QLabel(this);
     m_imagePreview->setFixedSize(200, 150);
-    m_imagePreview->setStyleSheet("border: 1px solid gray;");
     m_imagePreview->setAlignment(Qt::AlignCenter);
     m_imagePreview->setText(tr("无图片"));
     m_imagePreview->setScaledContents(true);
@@ -139,6 +141,7 @@ void ProductDialog::setupUI()
 
     m_okButton = new QPushButton(tr("确定"), this);
     m_okButton->setDefault(true);
+    m_okButton->setObjectName("okButton");
     buttonLayout->addWidget(m_okButton);
 
     mainLayout->addLayout(buttonLayout);

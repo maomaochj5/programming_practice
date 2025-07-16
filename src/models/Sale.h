@@ -63,7 +63,7 @@ public:
     // Getter 方法
     int getTransactionId() const { return m_transactionId; }
     Customer* getCustomer() const { return m_customer; }
-    QList<SaleItem*> getItems() const { return m_items; }
+    QList<SaleItem*> getItems() const;
     double getTotalAmount() const { return m_totalAmount; }
     double getDiscountAmount() const { return m_discountAmount; }
     double getFinalAmount() const { return m_totalAmount - m_discountAmount; }

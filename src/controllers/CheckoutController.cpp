@@ -26,10 +26,14 @@ CheckoutController::~CheckoutController()
 void CheckoutController::setCurrentSale(Sale* sale)
 {
     qDebug() << "CheckoutController::setCurrentSale called, sale:" << sale;
+    qDebug() << "CheckoutController::setCurrentSale this:" << this;
     
     // 先断开之前销售的信号连接
     if (m_currentSale) {
-        disconnect(m_currentSale, nullptr, this, nullptr);
+        qDebug() << "CheckoutController::setCurrentSale disconnecting old sale:" << m_currentSale;
+        // 只断开特定的信号连接，避免断开所有连接
+        disconnect(m_currentSale, &Sale::saleChanged, this, &CheckoutController::onSaleChanged);
+        disconnect(m_currentSale, &Sale::totalChanged, this, &CheckoutController::saleUpdated);
     }
     
     // 设置新的销售对象
@@ -42,6 +46,7 @@ void CheckoutController::setCurrentSale(Sale* sale)
     
     // 只有当新销售对象不为空时才进行连接
     if (m_currentSale) {
+        qDebug() << "CheckoutController::setCurrentSale connecting signals for sale:" << m_currentSale;
         // 连接新销售的信号
         connect(m_currentSale, &Sale::saleChanged,
                 this, &CheckoutController::onSaleChanged);
@@ -56,7 +61,9 @@ void CheckoutController::setCurrentSale(Sale* sale)
         qDebug() << "设置当前销售为nullptr";
     }
     
+    qDebug() << "CheckoutController::setCurrentSale emitting saleUpdated";
     emit saleUpdated();
+    qDebug() << "CheckoutController::setCurrentSale finished";
 }
 
 Sale* CheckoutController::startNewSale(Customer* customer)

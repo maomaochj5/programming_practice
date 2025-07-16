@@ -24,15 +24,19 @@ AIRecommender::AIRecommender(QObject *parent)
     , m_successfulRecommendations(0)
     , m_averageResponseTime(0.0)
 {
+    qDebug() << "AIRecommender 构造函数开始";
+    
     // 设置模型文件路径
     QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir().mkpath(dataDir);
     m_modelPath = dataDir + "/recommendation_model.json";
+    qDebug() << "AIRecommender 模型路径:" << m_modelPath;
     
     // 连接自动更新定时器
     connect(m_updateTimer, &QTimer::timeout, this, &AIRecommender::onAutoModelUpdate);
     
     // 初始化推荐系统
+    qDebug() << "AIRecommender 开始初始化推荐系统";
     initializeRecommender();
     
     qDebug() << "AI推荐系统初始化完成";
@@ -47,11 +51,14 @@ AIRecommender::~AIRecommender()
 
 bool AIRecommender::loadModel(const QString& modelPath)
 {
+    qDebug() << "AIRecommender::loadModel 开始";
+    
     QString path = modelPath.isEmpty() ? m_modelPath : modelPath;
+    qDebug() << "AIRecommender::loadModel 尝试加载模型:" << path;
     
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "无法打开模型文件:" << path;
+        qDebug() << "无法打开模型文件:" << path;
         return false;
     }
     
@@ -59,6 +66,7 @@ bool AIRecommender::loadModel(const QString& modelPath)
     QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &error);
     
     if (error.error != QJsonParseError::NoError) {
+        qWarning() << "模型文件解析错误:" << error.errorString();
         emit recommendationError(QString("模型文件解析错误: %1").arg(error.errorString()));
         return false;
     }
@@ -346,10 +354,20 @@ void AIRecommender::onAutoModelUpdate()
 
 void AIRecommender::initializeRecommender()
 {
+    qDebug() << "AIRecommender::initializeRecommender 开始";
+    
     // 尝试加载现有模型
+    try {
     if (!loadModel()) {
         qDebug() << "没有找到现有模型，将在首次使用时训练";
     }
+    } catch (const std::exception& e) {
+        qWarning() << "AIRecommender 初始化异常:" << e.what();
+    } catch (...) {
+        qWarning() << "AIRecommender 初始化发生未知异常";
+    }
+    
+    qDebug() << "AIRecommender::initializeRecommender 完成";
 }
 
 bool AIRecommender::buildItemSimilarityMatrix()

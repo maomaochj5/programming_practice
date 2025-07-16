@@ -10,6 +10,14 @@
 #include <memory>
 #include <QCloseEvent>
 
+#include "CartDelegate.h"
+#include "RecommendationItemWidget.h"
+
+// UI文件头文件，在编译时生成
+#ifdef QT_UI_HEADER
+#include "ui_MainWindow.h"
+#endif
+
 QT_BEGIN_NAMESPACE
 class QVBoxLayout;
 class QHBoxLayout;
@@ -22,6 +30,9 @@ class QComboBox;
 class QGroupBox;
 class QSplitter;
 QT_END_NAMESPACE
+namespace Ui {
+class MainWindow;
+}
 
 // 前向声明
 class CheckoutController;
@@ -30,6 +41,7 @@ class AIRecommender;
 class BarcodeScanner;
 class Product;
 class Sale;
+class CartDelegate;
 
 /**
  * @brief MainWindow类 - 主窗口界面
@@ -63,81 +75,49 @@ private slots:
     // 销售相关槽函数
     void onNewSale();
     void onSaleUpdated();
-    void onItemQuantityChanged();
+    void onItemQuantityChanged(QStandardItem *item);
     void onRemoveItem();
     void onProcessPayment();
     void onClearSale();
+    void onRemoveItemFromCart(const QModelIndex &index);
     
     // 商品管理槽函数
-    void onAddProduct();
-    void onEditProduct();
-    void onDeleteProduct();
-    void onRefreshProducts();
-    void onProductDoubleClicked(const QModelIndex& index);
+    void onManageProducts();
+    void onProductDoubleClicked(const QModelIndex &index);
     
     // 条码扫描槽函数
     void onBarcodeScanned(const QString& barcode);
-    void onManualBarcodeEntry();
+    void onProductFoundByBarcode(Product* product, const QString& barcode);
+    void onSearchProduct();
+    void onStartScan();
+    void onStopScan();
     
     // AI推荐槽函数
     void onRecommendationSelected();
     void onRecommendationsUpdated(const QList<int>& productIds);
+    void onRefreshRecommendations();
+    void onRecommendationAddToCart(int productId);
+    
+    // Unified search/scan slot
+    void onSearchOrScan();
+
+    // 购物车和支付槽函数
+    void onAddToCart();
+    void onApplyDiscount();
+    void onPrintReceipt();
+    void onRefreshProducts();
     
     // 系统槽函数
     void onShowStatistics();
     void onShowSettings();
     void onAbout();
-    void updateStatusBar();
+    void updateTime();
 
 private:
     /**
      * @brief 初始化用户界面
      */
     void initializeUI();
-    
-    /**
-     * @brief 创建菜单栏
-     */
-    void createMenuBar();
-    
-    /**
-     * @brief 创建工具栏
-     */
-    void createToolBar();
-    
-    /**
-     * @brief 创建状态栏
-     */
-    void createStatusBar();
-    
-    /**
-     * @brief 创建中央窗口部件
-     */
-    void createCentralWidget();
-    
-    /**
-     * @brief 创建销售区域
-     * @return 销售区域的组件
-     */
-    QWidget* createSalesArea();
-    
-    /**
-     * @brief 创建商品管理区域
-     * @return 商品管理区域的组件
-     */
-    QWidget* createProductArea();
-    
-    /**
-     * @brief 创建推荐区域
-     * @return 推荐区域的组件
-     */
-    QWidget* createRecommendationArea();
-    
-    /**
-     * @brief 创建条码扫描区域
-     * @return 条码扫描区域的组件
-     */
-    QWidget* createBarcodeScanArea();
     
     /**
      * @brief 连接信号与槽
@@ -149,6 +129,8 @@ private:
      */
     void setupStyleSheet();
     
+
+    
     /**
      * @brief 更新购物车显示
      */
@@ -157,13 +139,23 @@ private:
     /**
      * @brief 更新商品列表显示
      */
-    void updateProductDisplay();
+    void updateProductDisplay(const QList<Product*>& products);
     
     /**
      * @brief 更新推荐商品显示
      */
     void updateRecommendationDisplay();
     
+    /**
+     * @brief 更新推荐商品显示（带参数）
+     */
+    void updateRecommendationDisplay(const QList<int>& productIds);
+    
+    /**
+     * @brief 更新总计显示
+     */
+    void updateTotals();
+
     /**
      * @brief 显示错误消息
      * @param message 错误消息
@@ -177,52 +169,18 @@ private:
     void showSuccessMessage(const QString& message);
 
 private:
+    // UI
+    std::unique_ptr<Ui::MainWindow> ui;
+
     // 核心控制器
     std::unique_ptr<CheckoutController> m_checkoutController;
     std::unique_ptr<ProductManager> m_productManager;
     std::unique_ptr<AIRecommender> m_aiRecommender;
     std::unique_ptr<BarcodeScanner> m_barcodeScanner;
+    CartDelegate* m_cartDelegate;
     
-    // 主要UI组件
-    QWidget* m_centralWidget;
-    QSplitter* m_mainSplitter;
-    
-    // 销售区域组件
-    QGroupBox* m_salesGroup;
-    QListWidget* m_cartList;
-    QLabel* m_totalLabel;
-    QPushButton* m_newSaleButton;
-    QPushButton* m_paymentButton;
-    QPushButton* m_clearSaleButton;
-    QPushButton* m_removeItemButton;
-    QSpinBox* m_quantitySpinBox;
-    
-    // 商品管理区域组件
-    QGroupBox* m_productGroup;
-    QTableView* m_productTable;
+    // UI文件中的组件引用（通过UI文件自动生成）
     QStandardItemModel* m_productModel;
-    QPushButton* m_addProductButton;
-    QPushButton* m_editProductButton;
-    QPushButton* m_deleteProductButton;
-    QPushButton* m_refreshProductButton;
-    
-    // 条码扫描区域组件
-    QGroupBox* m_barcodeGroup;
-    QLabel* m_scannerStatus;
-    QLineEdit* m_manualBarcodeEdit;
-    QPushButton* m_manualBarcodeButton;
-    QWidget* m_cameraWidget;
-    
-    // 推荐区域组件
-    QGroupBox* m_recommendationGroup;
-    QListWidget* m_recommendationList;
-    QPushButton* m_addRecommendationButton;
-    
-    // 状态栏组件
-    QLabel* m_statusLabel;
-    QLabel* m_timeLabel;
-    QLabel* m_userLabel;
-    QTimer* m_statusTimer;
 
     // 退出标志
     bool m_isClosing = false;

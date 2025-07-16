@@ -49,7 +49,6 @@ public:
     PaymentResult getResult() const;
 
 private slots:
-    void onPaymentMethodChanged();
     void onCashAmountChanged();
     void calculateChange();
     void processPayment();
@@ -62,6 +61,7 @@ private:
     void setupUI();
     void setupConnections();
     void setupSounds();
+    void onPaymentMethodChanged();
     void updatePaymentDisplay();
     void showPaymentProcessing();
     void hidePaymentProcessing();
@@ -72,19 +72,14 @@ private:
     QLabel *m_totalLabel;
     QLabel *m_changeLabel;
     
-    QButtonGroup *m_paymentMethodGroup;
-    QRadioButton *m_cashRadio;
-    QRadioButton *m_cardRadio;
-    QRadioButton *m_mobileRadio;
-    QRadioButton *m_mixedRadio;
+    // Payment method buttons
+    QPushButton *m_cashButton;
+    QPushButton *m_cardButton;
+    QPushButton *m_mobileButton;
     
     QDoubleSpinBox *m_cashAmountSpinBox;
-    QDoubleSpinBox *m_cardAmountSpinBox;
-    QDoubleSpinBox *m_mobileAmountSpinBox;
     
     QLabel *m_cashAmountLabel;
-    QLabel *m_cardAmountLabel;
-    QLabel *m_mobileAmountLabel;
     
     QPushButton *m_processButton;
     QPushButton *m_cancelButton;
@@ -96,6 +91,7 @@ private:
     double m_totalAmount;
     double m_changeAmount;
     PaymentResult m_result;
+    PaymentMethod m_selectedMethod;
     
     QTimer *m_paymentTimer;
     QSoundEffect *m_successSound;

@@ -6,6 +6,7 @@ Product::Product(QObject *parent)
     , m_productId(-1)
     , m_price(0.0)
     , m_stockQuantity(0)
+    , m_imagePath("") // Default empty path
 {
 }
 
@@ -20,6 +21,7 @@ Product::Product(int productId, const QString& barcode, const QString& name,
     , m_price(price)
     , m_stockQuantity(stockQuantity)
     , m_category(category)
+    , m_imagePath("") // Default empty path
 {
 }
 
@@ -32,6 +34,7 @@ Product::Product(const Product& other)
     , m_price(other.m_price)
     , m_stockQuantity(other.m_stockQuantity)
     , m_category(other.m_category)
+    , m_imagePath(other.m_imagePath)
 {
 }
 
@@ -45,6 +48,7 @@ Product& Product::operator=(const Product& other)
         m_price = other.m_price;
         m_stockQuantity = other.m_stockQuantity;
         m_category = other.m_category;
+        m_imagePath = other.m_imagePath;
         
         emit productChanged();
     }
@@ -114,6 +118,14 @@ void Product::setCategory(const QString& category)
     }
 }
 
+void Product::setImagePath(const QString& imagePath)
+{
+    if (m_imagePath != imagePath) {
+        m_imagePath = imagePath;
+        emit productChanged();
+    }
+}
+
 bool Product::isValid() const
 {
     return !m_barcode.isEmpty() && 
@@ -160,11 +172,12 @@ void Product::increaseStock(int quantity)
 
 QString Product::toString() const
 {
-    return QString("Product[ID:%1, Barcode:%2, Name:%3, Price:%4, Stock:%5, Category:%6]")
+    return QString("Product[ID:%1, Barcode:%2, Name:%3, Price:%4, Stock:%5, Category:%6, Image:%7]")
            .arg(m_productId)
            .arg(m_barcode)
            .arg(m_name)
            .arg(m_price, 0, 'f', 2)
            .arg(m_stockQuantity)
-           .arg(m_category);
+           .arg(m_category)
+           .arg(m_imagePath);
 }

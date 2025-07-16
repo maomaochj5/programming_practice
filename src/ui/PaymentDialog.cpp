@@ -4,12 +4,15 @@
 #include <QDir>
 #include <QRandomGenerator>
 #include <QSoundEffect>
+#include <QIcon>
+#include <QMessageBox>
 
 PaymentDialog::PaymentDialog(double totalAmount, QWidget *parent)
     : QDialog(parent)
     , m_totalAmount(totalAmount)
     , m_changeAmount(0.0)
     , m_result(Cancelled)
+    , m_selectedMethod(Cash)
     , m_paymentTimer(new QTimer(this))
     , m_successSound(new QSoundEffect(this))
     , m_errorSound(new QSoundEffect(this))
@@ -33,37 +36,31 @@ void PaymentDialog::setupUI()
     auto *amountLayout = new QFormLayout(amountGroup);
 
     m_totalLabel = new QLabel(QString("¥%1").arg(m_totalAmount, 0, 'f', 2), this);
-    m_totalLabel->setStyleSheet("font-size: 18px; font-weight: bold; color: #d32f2f;");
     amountLayout->addRow(tr("总金额:"), m_totalLabel);
 
     m_changeLabel = new QLabel("¥0.00", this);
-    m_changeLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #388e3c;");
     amountLayout->addRow(tr("找零:"), m_changeLabel);
 
     mainLayout->addWidget(amountGroup);
 
     // 支付方式选择
-    auto *methodGroup = new QGroupBox(tr("支付方式"), this);
-    auto *methodLayout = new QVBoxLayout(methodGroup);
+    auto *methodGroup = new QGroupBox(tr("选择支付方式"), this);
+    auto *methodLayout = new QHBoxLayout(methodGroup);
+    methodLayout->setSpacing(15);
 
-    m_paymentMethodGroup = new QButtonGroup(this);
+    m_cashButton = new QPushButton(QIcon(":/resources/cash.png"), tr("现金"), this);
+    m_cardButton = new QPushButton(QIcon(":/resources/card.png"), tr("银行卡"), this);
+    m_mobileButton = new QPushButton(QIcon(":/resources/mobile_pay.png"), tr("移动支付"), this);
 
-    m_cashRadio = new QRadioButton(tr("现金支付"), this);
-    m_cashRadio->setChecked(true);
-    m_paymentMethodGroup->addButton(m_cashRadio, Cash);
-    methodLayout->addWidget(m_cashRadio);
-
-    m_cardRadio = new QRadioButton(tr("银行卡支付"), this);
-    m_paymentMethodGroup->addButton(m_cardRadio, Card);
-    methodLayout->addWidget(m_cardRadio);
-
-    m_mobileRadio = new QRadioButton(tr("移动支付（扫码）"), this);
-    m_paymentMethodGroup->addButton(m_mobileRadio, Mobile);
-    methodLayout->addWidget(m_mobileRadio);
-
-    m_mixedRadio = new QRadioButton(tr("组合支付"), this);
-    m_paymentMethodGroup->addButton(m_mixedRadio, Mixed);
-    methodLayout->addWidget(m_mixedRadio);
+    QPushButton* buttons[] = { m_cashButton, m_cardButton, m_mobileButton };
+    for(auto* button : buttons) {
+        button->setIconSize(QSize(48, 48));
+        button->setMinimumHeight(80);
+        button->setCheckable(true);
+        methodLayout->addWidget(button);
+    }
+    
+    m_cashButton->setChecked(true);
 
     mainLayout->addWidget(methodGroup);
 
@@ -72,33 +69,14 @@ void PaymentDialog::setupUI()
     auto *inputLayout = new QFormLayout(inputGroup);
 
     // 现金金额
-    m_cashAmountLabel = new QLabel(tr("现金金额:"), this);
+    m_cashAmountLabel = new QLabel(tr("支付现金:"), this);
     m_cashAmountSpinBox = new QDoubleSpinBox(this);
     m_cashAmountSpinBox->setRange(0.0, 999999.99);
     m_cashAmountSpinBox->setDecimals(2);
     m_cashAmountSpinBox->setSuffix(" 元");
     m_cashAmountSpinBox->setValue(m_totalAmount);
+    m_cashAmountSpinBox->setButtonSymbols(QAbstractSpinBox::NoButtons);
     inputLayout->addRow(m_cashAmountLabel, m_cashAmountSpinBox);
-
-    // 银行卡金额
-    m_cardAmountLabel = new QLabel(tr("银行卡金额:"), this);
-    m_cardAmountSpinBox = new QDoubleSpinBox(this);
-    m_cardAmountSpinBox->setRange(0.0, 999999.99);
-    m_cardAmountSpinBox->setDecimals(2);
-    m_cardAmountSpinBox->setSuffix(" 元");
-    m_cardAmountSpinBox->setVisible(false);
-    m_cardAmountLabel->setVisible(false);
-    inputLayout->addRow(m_cardAmountLabel, m_cardAmountSpinBox);
-
-    // 移动支付金额
-    m_mobileAmountLabel = new QLabel(tr("移动支付金额:"), this);
-    m_mobileAmountSpinBox = new QDoubleSpinBox(this);
-    m_mobileAmountSpinBox->setRange(0.0, 999999.99);
-    m_mobileAmountSpinBox->setDecimals(2);
-    m_mobileAmountSpinBox->setSuffix(" 元");
-    m_mobileAmountSpinBox->setVisible(false);
-    m_mobileAmountLabel->setVisible(false);
-    inputLayout->addRow(m_mobileAmountLabel, m_mobileAmountSpinBox);
 
     mainLayout->addWidget(inputGroup);
 
@@ -121,7 +99,7 @@ void PaymentDialog::setupUI()
 
     m_processButton = new QPushButton(tr("确认支付"), this);
     m_processButton->setDefault(true);
-    m_processButton->setStyleSheet("QPushButton { background-color: #4caf50; color: white; font-weight: bold; }");
+    m_processButton->setObjectName("processButton"); // for specific styling
     buttonLayout->addWidget(m_processButton);
 
     mainLayout->addLayout(buttonLayout);
@@ -129,15 +107,27 @@ void PaymentDialog::setupUI()
 
 void PaymentDialog::setupConnections()
 {
-    connect(m_paymentMethodGroup, &QButtonGroup::buttonClicked,
-            this, &PaymentDialog::onPaymentMethodChanged);
+    connect(m_cashButton, &QPushButton::clicked, this, [this](){
+        m_selectedMethod = Cash;
+        m_cardButton->setChecked(false);
+        m_mobileButton->setChecked(false);
+        onPaymentMethodChanged();
+    });
+    connect(m_cardButton, &QPushButton::clicked, this, [this](){
+        m_selectedMethod = Card;
+        m_cashButton->setChecked(false);
+        m_mobileButton->setChecked(false);
+        onPaymentMethodChanged();
+    });
+    connect(m_mobileButton, &QPushButton::clicked, this, [this](){
+        m_selectedMethod = Mobile;
+        m_cashButton->setChecked(false);
+        m_cardButton->setChecked(false);
+        onPaymentMethodChanged();
+    });
     
     connect(m_cashAmountSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this, &PaymentDialog::onCashAmountChanged);
-    connect(m_cardAmountSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &PaymentDialog::calculateChange);
-    connect(m_mobileAmountSpinBox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &PaymentDialog::calculateChange);
 
     connect(m_processButton, &QPushButton::clicked, this, &PaymentDialog::processPayment);
     connect(m_cancelButton, &QPushButton::clicked, this, &PaymentDialog::cancelPayment);
@@ -147,43 +137,14 @@ void PaymentDialog::setupConnections()
 
 void PaymentDialog::onPaymentMethodChanged()
 {
-    PaymentMethod method = static_cast<PaymentMethod>(m_paymentMethodGroup->checkedId());
-    
-    // 隐藏所有金额输入
-    m_cardAmountLabel->setVisible(false);
-    m_cardAmountSpinBox->setVisible(false);
-    m_mobileAmountLabel->setVisible(false);
-    m_mobileAmountSpinBox->setVisible(false);
-    
-    // 重置金额
-    m_cardAmountSpinBox->setValue(0.0);
-    m_mobileAmountSpinBox->setValue(0.0);
-    
-    switch (method) {
-    case Cash:
+    bool isCash = (m_selectedMethod == Cash);
+    m_cashAmountLabel->setVisible(isCash);
+    m_cashAmountSpinBox->setVisible(isCash);
+
+    if (isCash) {
         m_cashAmountSpinBox->setValue(m_totalAmount);
-        break;
-        
-    case Card:
-        m_cashAmountSpinBox->setValue(0.0);
-        m_cardAmountSpinBox->setValue(m_totalAmount);
-        m_cardAmountLabel->setVisible(true);
-        m_cardAmountSpinBox->setVisible(true);
-        break;
-        
-    case Mobile:
-        m_cashAmountSpinBox->setValue(0.0);
-        m_mobileAmountSpinBox->setValue(m_totalAmount);
-        m_mobileAmountLabel->setVisible(true);
-        m_mobileAmountSpinBox->setVisible(true);
-        break;
-        
-    case Mixed:
-        m_cardAmountLabel->setVisible(true);
-        m_cardAmountSpinBox->setVisible(true);
-        m_mobileAmountLabel->setVisible(true);
-        m_mobileAmountSpinBox->setVisible(true);
-        break;
+        m_cashAmountSpinBox->setFocus();
+        m_cashAmountSpinBox->selectAll();
     }
     
     calculateChange();
@@ -197,8 +158,14 @@ void PaymentDialog::onCashAmountChanged()
 
 void PaymentDialog::calculateChange()
 {
-    double totalPaid = getCashAmount() + getCardAmount() + getMobileAmount();
-    m_changeAmount = totalPaid - m_totalAmount;
+    double paidAmount = 0;
+    if (m_selectedMethod == Cash) {
+        paidAmount = getCashAmount();
+    } else {
+        paidAmount = m_totalAmount; // For Card and Mobile, assume exact amount is paid
+    }
+
+    m_changeAmount = paidAmount - m_totalAmount;
     
     if (m_changeAmount < 0) {
         m_changeLabel->setText(QString("还需: ¥%1").arg(-m_changeAmount, 0, 'f', 2));
@@ -229,6 +196,9 @@ void PaymentDialog::updatePaymentDisplay()
         m_processButton->setText(tr("组合支付"));
         break;
     }
+
+    bool hasChange = m_changeAmount > 0;
+    m_changeLabel->setText(QString("¥%1").arg(m_changeAmount, 0, 'f', 2));
 }
 
 void PaymentDialog::processPayment()
@@ -252,15 +222,12 @@ void PaymentDialog::processPayment()
     case Mobile:
         simulateMobilePayment();
         break;
-        
     case Mixed:
-        // 组合支付模拟
-        m_statusLabel->setText(tr("处理组合支付..."));
-        QTimer::singleShot(3000, [this]() {
-            m_result = Success;
-            playSuccessSound();
-            accept();
-        });
+        // This case is no longer used
+        m_result = Failed;
+        playErrorSound();
+        hidePaymentProcessing();
+        QMessageBox::warning(this, tr("错误"), tr("不支持的支付方式"));
         break;
     }
 }
@@ -386,7 +353,7 @@ void PaymentDialog::playErrorSound()
 
 PaymentDialog::PaymentMethod PaymentDialog::getPaymentMethod() const
 {
-    return static_cast<PaymentMethod>(m_paymentMethodGroup->checkedId());
+    return m_selectedMethod;
 }
 
 double PaymentDialog::getCashAmount() const
@@ -396,12 +363,12 @@ double PaymentDialog::getCashAmount() const
 
 double PaymentDialog::getCardAmount() const
 {
-    return m_cardAmountSpinBox->value();
+    return (m_selectedMethod == Card) ? m_totalAmount : 0.0;
 }
 
 double PaymentDialog::getMobileAmount() const
 {
-    return m_mobileAmountSpinBox->value();
+    return (m_selectedMethod == Mobile) ? m_totalAmount : 0.0;
 }
 
 double PaymentDialog::getChangeAmount() const

@@ -13,15 +13,18 @@ Sale::Sale(QObject *parent)
     , m_timestamp(QDateTime::currentDateTime())
 {
     qDebug() << "Sale 构造, this:" << this << ", parent:" << parent;
+    qDebug() << "Sale 构造, m_items.size:" << m_items.size();
 }
 
 Sale::~Sale()
 {
     qDebug() << "Sale 析构, this:" << this;
-    // 清理所有销售项目
+    qDebug() << "Sale 析构, m_items.size:" << m_items.size();
     for (SaleItem* item : m_items) {
+        qDebug() << "Sale 析构, item ptr:" << item;
         if (item) {
-            item->deleteLater();
+            // 直接删除，不使用deleteLater()，避免在析构时出现问题
+            delete item;
         }
     }
     m_items.clear();
@@ -83,8 +86,7 @@ void Sale::setDiscountAmount(double discount)
 {
     if (qAbs(m_discountAmount - discount) > 0.01 && discount >= 0.0) {
         m_discountAmount = discount;
-        emit saleChanged();
-        emit totalChanged(getFinalAmount());
+        calculateTotal(); // Recalculate and emit signals
     }
 }
 
@@ -106,6 +108,7 @@ void Sale::addItem(Product* product, int quantity, double unitPrice)
             qAbs(item->getUnitPrice() - unitPrice) < 0.01) {
             // 增加数量而不是创建新项目
             item->setQuantity(item->getQuantity() + quantity);
+            // After quantity is set, we need to manually trigger the recalculation and signaling
             calculateTotal();
             return;
         }
@@ -115,16 +118,13 @@ void Sale::addItem(Product* product, int quantity, double unitPrice)
     SaleItem* newItem = new SaleItem(product, quantity, unitPrice, this);
     
     // 连接信号
-    connect(newItem, &SaleItem::itemChanged, 
-            this, &Sale::calculateTotal);
+    connect(newItem, &SaleItem::itemChanged, this, &Sale::calculateTotal);
     
     m_items.append(newItem);
-    calculateTotal();
     
     emit itemAdded(newItem);
-    emit saleChanged();
-    
-    qDebug() << "添加销售项目:" << newItem->toString();
+    // No longer emit saleChanged() here, calculateTotal will do it.
+    calculateTotal(); // Update totals
 }
 
 bool Sale::removeItem(int index)
@@ -135,11 +135,12 @@ bool Sale::removeItem(int index)
     }
     
     SaleItem* item = m_items.takeAt(index);
-    item->deleteLater();
+    // 直接删除，不使用deleteLater()
+    delete item;
     
-    calculateTotal();
     emit itemRemoved(index);
-    emit saleChanged();
+    // No longer emit saleChanged() here, calculateTotal will do it.
+    calculateTotal(); // Update totals
     
     qDebug() << "移除销售项目，索引:" << index;
     return true;
@@ -174,25 +175,27 @@ bool Sale::updateItemQuantity(int index, int quantity)
     }
     
     m_items[index]->setQuantity(quantity);
+    // setQuantity will trigger itemChanged, which calls calculateTotal.
+    // So no extra call is needed here, the connection handles it.
     return true;
 }
 
 void Sale::clearItems()
 {
     for (SaleItem* item : m_items) {
-        item->deleteLater();
+        // 直接删除，不使用deleteLater()
+        delete item;
     }
     m_items.clear();
     
+    // No longer emit saleChanged() here, calculateTotal will do it.
     calculateTotal();
-    emit saleChanged();
     
     qDebug() << "清空所有销售项目";
 }
 
 void Sale::calculateTotal()
 {
-    double oldTotal = m_totalAmount;
     m_totalAmount = 0.0;
     
     for (const SaleItem* item : m_items) {
@@ -201,9 +204,9 @@ void Sale::calculateTotal()
         }
     }
     
-    if (qAbs(oldTotal - m_totalAmount) > 0.01) {
-        emit totalChanged(getFinalAmount());
-    }
+    // Always emit both signals to ensure all listeners are updated
+    emit totalChanged(getFinalAmount());
+    emit saleChanged();
 }
 
 bool Sale::isEmpty() const
@@ -278,4 +281,13 @@ QString Sale::toString() const
            .arg(getFinalAmount(), 0, 'f', 2)
            .arg(paymentMethodToString(m_paymentMethod))
            .arg(static_cast<int>(m_status));
+}
+
+QList<SaleItem*> Sale::getItems() const
+{
+    qDebug() << "Sale::getItems called, this:" << this << ", m_items.size:" << m_items.size();
+    for (auto* item : m_items) {
+        qDebug() << "Sale::getItems item ptr:" << item;
+    }
+    return m_items;
 }

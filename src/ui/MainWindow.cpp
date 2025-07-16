@@ -1,4 +1,6 @@
+#define QT_UI_HEADER
 #include "MainWindow.h"
+#include "ui_MainWindow.h"
 #include "../controllers/CheckoutController.h"
 #include "../controllers/ProductManager.h"
 #include "../ai/AIRecommender.h"
@@ -7,6 +9,9 @@
 #include "../models/Product.h"
 #include "ProductDialog.h"
 #include "PaymentDialog.h"
+#include "ProductManagementDialog.h"
+#include "ui/CartDelegate.h"
+#include "ui/RecommendationItemWidget.h"
 
 #include <QApplication>
 #include <QMenuBar>
@@ -36,12 +41,13 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , m_centralWidget(nullptr)
-    , m_mainSplitter(nullptr)
+    , ui(std::make_unique<Ui::MainWindow>())
     , m_currentSale(nullptr)
     , m_currentUser("收银员")
-    , m_isClosing(false) // Initialize the closing flag
+    , m_isClosing(false)
 {
+    qDebug() << "MainWindow 构造函数开始";
+    
     // 初始化控制器
     m_checkoutController = std::make_unique<CheckoutController>(this);
     m_productManager = std::make_unique<ProductManager>(this);
@@ -60,8 +66,14 @@ MainWindow::MainWindow(QWidget *parent)
     // 启动新的销售
     onNewSale();
     
-    // 刷新商品列表
-    onRefreshProducts();
+    // 异步刷新商品列表
+    m_productManager->getAllProducts();
+    
+    // Setup timer for clock
+    QTimer *timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, &MainWindow::updateTime);
+    timer->start(1000);
+    updateTime(); // Initial call
     
     qDebug() << "主窗口初始化完成";
 }
@@ -79,374 +91,151 @@ MainWindow::~MainWindow()
 
 void MainWindow::initializeUI()
 {
+    qDebug() << "MainWindow::initializeUI called";
     setWindowTitle("智能超市收银系统 v1.0");
     setMinimumSize(1200, 800);
     resize(1400, 900);
     
-    // 创建菜单栏
-    createMenuBar();
+    qDebug() << "MainWindow::initializeUI 准备调用 setupUi(this)";
+    try {
+        ui->setupUi(this);
+        qDebug() << "MainWindow ui.setupUi(this) 完成";
+    } catch (...) {
+        qDebug() << "MainWindow::initializeUI setupUi(this) 异常";
+        return;
+    }
     
-    // 创建工具栏
-    createToolBar();
+    qDebug() << "MainWindow::initializeUI 检查 UI 组件";
+    qDebug() << "cartTableView:" << ui->cartTableView;
+    qDebug() << "productListWidget:" << ui->productListWidget;
+    qDebug() << "recommendationListWidget:" << ui->recommendationListWidget;
     
-    // 创建中央窗口
-    createCentralWidget();
-    
-    // 创建状态栏
-    createStatusBar();
-}
-
-void MainWindow::createMenuBar()
-{
-    // 文件菜单
-    QMenu* fileMenu = menuBar()->addMenu("文件(&F)");
-    
-    QAction* newSaleAction = fileMenu->addAction("新建销售(&N)");
-    newSaleAction->setShortcut(QKeySequence::New);
-    connect(newSaleAction, &QAction::triggered, this, &MainWindow::onNewSale);
-    
-    fileMenu->addSeparator();
-    
-    QAction* exitAction = fileMenu->addAction("退出(&X)");
-    exitAction->setShortcut(QKeySequence::Quit);
-    connect(exitAction, &QAction::triggered, this, &QWidget::close);
-    
-    // 商品菜单
-    QMenu* productMenu = menuBar()->addMenu("商品(&P)");
-    
-    QAction* addProductAction = productMenu->addAction("添加商品(&A)");
-    addProductAction->setShortcut(QKeySequence("Ctrl+A"));
-    connect(addProductAction, &QAction::triggered, this, &MainWindow::onAddProduct);
-    
-    QAction* editProductAction = productMenu->addAction("编辑商品(&E)");
-    editProductAction->setShortcut(QKeySequence("Ctrl+E"));
-    connect(editProductAction, &QAction::triggered, this, &MainWindow::onEditProduct);
-    
-    QAction* deleteProductAction = productMenu->addAction("删除商品(&D)");
-    deleteProductAction->setShortcut(QKeySequence::Delete);
-    connect(deleteProductAction, &QAction::triggered, this, &MainWindow::onDeleteProduct);
-    
-    productMenu->addSeparator();
-    
-    QAction* refreshAction = productMenu->addAction("刷新列表(&R)");
-    refreshAction->setShortcut(QKeySequence::Refresh);
-    connect(refreshAction, &QAction::triggered, this, &MainWindow::onRefreshProducts);
-    
-    // 工具菜单
-    QMenu* toolsMenu = menuBar()->addMenu("工具(&T)");
-    
-    QAction* statsAction = toolsMenu->addAction("销售统计(&S)");
-    connect(statsAction, &QAction::triggered, this, &MainWindow::onShowStatistics);
-    
-    QAction* settingsAction = toolsMenu->addAction("系统设置(&C)");
-    connect(settingsAction, &QAction::triggered, this, &MainWindow::onShowSettings);
-    
-    // 帮助菜单
-    QMenu* helpMenu = menuBar()->addMenu("帮助(&H)");
-    
-    QAction* aboutAction = helpMenu->addAction("关于(&A)");
-    connect(aboutAction, &QAction::triggered, this, &MainWindow::onAbout);
-}
-
-void MainWindow::createToolBar()
-{
-    QToolBar* mainToolBar = addToolBar("主工具栏");
-    mainToolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    
-    // 新建销售
-    QAction* newSaleAction = mainToolBar->addAction("新建销售");
-    newSaleAction->setIcon(QIcon(":/icons/new_sale.png"));
-    connect(newSaleAction, &QAction::triggered, this, &MainWindow::onNewSale);
-    
-    mainToolBar->addSeparator();
-    
-    // 支付
-    QAction* paymentAction = mainToolBar->addAction("支付");
-    paymentAction->setIcon(QIcon(":/icons/payment.png"));
-    connect(paymentAction, &QAction::triggered, this, &MainWindow::onProcessPayment);
-    
-    mainToolBar->addSeparator();
-    
-    // 商品管理
-    QAction* productAction = mainToolBar->addAction("商品管理");
-    productAction->setIcon(QIcon(":/icons/products.png"));
-    connect(productAction, &QAction::triggered, this, &MainWindow::onAddProduct);
-    
-    // 统计报表
-    QAction* statsAction = mainToolBar->addAction("销售统计");
-    statsAction->setIcon(QIcon(":/icons/stats.png"));
-    connect(statsAction, &QAction::triggered, this, &MainWindow::onShowStatistics);
-}
-
-void MainWindow::createStatusBar()
-{
-    m_statusLabel = new QLabel("就绪");
-    m_timeLabel = new QLabel();
-    m_userLabel = new QLabel(QString("用户: %1").arg(m_currentUser));
-    
-    statusBar()->addWidget(m_statusLabel);
-    statusBar()->addPermanentWidget(m_userLabel);
-    statusBar()->addPermanentWidget(m_timeLabel);
-    
-    // 状态更新定时器
-    m_statusTimer = new QTimer(this);
-    connect(m_statusTimer, &QTimer::timeout, this, &MainWindow::updateStatusBar);
-    m_statusTimer->start(1000); // 每秒更新
-    
-    updateStatusBar();
-}
-
-void MainWindow::createCentralWidget()
-{
-    m_centralWidget = new QWidget;
-    setCentralWidget(m_centralWidget);
-    
-    // 主分割器
-    m_mainSplitter = new QSplitter(Qt::Horizontal, m_centralWidget);
-    
-    // 左侧：销售和条码扫描区域
-    QWidget* leftWidget = new QWidget;
-    QVBoxLayout* leftLayout = new QVBoxLayout(leftWidget);
-    leftLayout->addWidget(createSalesArea());
-    leftLayout->addWidget(createBarcodeScanArea());
-    
-    // 中间：商品管理区域
-    QWidget* centerWidget = createProductArea();
-    
-    // 右侧：推荐区域
-    QWidget* rightWidget = createRecommendationArea();
-    
-    // 添加到分割器
-    m_mainSplitter->addWidget(leftWidget);
-    m_mainSplitter->addWidget(centerWidget);
-    m_mainSplitter->addWidget(rightWidget);
-    
-    // 设置分割器比例
-    m_mainSplitter->setSizes({350, 600, 250});
-    
-    // 主布局
-    QHBoxLayout* mainLayout = new QHBoxLayout(m_centralWidget);
-    mainLayout->addWidget(m_mainSplitter);
-}
-
-QWidget* MainWindow::createSalesArea()
-{
-    m_salesGroup = new QGroupBox("当前销售");
-    QVBoxLayout* layout = new QVBoxLayout(m_salesGroup);
-    
-    // 购物车列表
-    m_cartList = new QListWidget;
-    m_cartList->setMinimumHeight(300);
-    layout->addWidget(m_cartList);
-    
-    // 数量调整
-    QHBoxLayout* quantityLayout = new QHBoxLayout;
-    quantityLayout->addWidget(new QLabel("数量:"));
-    m_quantitySpinBox = new QSpinBox;
-    m_quantitySpinBox->setMinimum(1);
-    m_quantitySpinBox->setMaximum(999);
-    m_quantitySpinBox->setValue(1);
-    quantityLayout->addWidget(m_quantitySpinBox);
-    quantityLayout->addStretch();
-    layout->addLayout(quantityLayout);
-    
-    // 总金额显示
-    m_totalLabel = new QLabel("总计: ¥0.00");
-    m_totalLabel->setStyleSheet("QLabel { font-size: 18px; font-weight: bold; color: #2E8B57; }");
-    layout->addWidget(m_totalLabel);
-    
-    // 操作按钮
-    QGridLayout* buttonLayout = new QGridLayout;
-    
-    m_newSaleButton = new QPushButton("新建销售");
-    m_newSaleButton->setMinimumHeight(40);
-    buttonLayout->addWidget(m_newSaleButton, 0, 0);
-    
-    m_removeItemButton = new QPushButton("移除商品");
-    m_removeItemButton->setMinimumHeight(40);
-    buttonLayout->addWidget(m_removeItemButton, 0, 1);
-    
-    m_paymentButton = new QPushButton("支付");
-    m_paymentButton->setMinimumHeight(50);
-    m_paymentButton->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; }");
-    buttonLayout->addWidget(m_paymentButton, 1, 0, 1, 2);
-    
-    m_clearSaleButton = new QPushButton("清空");
-    m_clearSaleButton->setMinimumHeight(40);
-    buttonLayout->addWidget(m_clearSaleButton, 2, 0, 1, 2);
-    
-    layout->addLayout(buttonLayout);
-    
-    return m_salesGroup;
-}
-
-QWidget* MainWindow::createProductArea()
-{
-    m_productGroup = new QGroupBox("商品管理");
-    QVBoxLayout* layout = new QVBoxLayout(m_productGroup);
-    
-    // 商品表格
-    m_productTable = new QTableView;
     m_productModel = new QStandardItemModel(this);
-    m_productModel->setHorizontalHeaderLabels({"ID", "条码", "名称", "价格", "库存", "分类"});
-    m_productTable->setModel(m_productModel);
-    m_productTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_productTable->setAlternatingRowColors(true);
-    m_productTable->horizontalHeader()->setStretchLastSection(true);
-    
-    // 添加双击事件处理
-    connect(m_productTable, &QTableView::doubleClicked, this, &MainWindow::onProductDoubleClicked);
-    
-    layout->addWidget(m_productTable);
-    
-    // 操作按钮
-    QHBoxLayout* buttonLayout = new QHBoxLayout;
-    
-    m_addProductButton = new QPushButton("添加商品");
-    m_editProductButton = new QPushButton("编辑商品");
-    m_deleteProductButton = new QPushButton("删除商品");
-    m_refreshProductButton = new QPushButton("刷新列表");
-    
-    buttonLayout->addWidget(m_addProductButton);
-    buttonLayout->addWidget(m_editProductButton);
-    buttonLayout->addWidget(m_deleteProductButton);
-    buttonLayout->addStretch();
-    buttonLayout->addWidget(m_refreshProductButton);
-    
-    layout->addLayout(buttonLayout);
-    
-    return m_productGroup;
-}
+    m_productModel->setHorizontalHeaderLabels({"商品名称", "数量", "单价", "小计", "操作"});
+    if (ui->cartTableView) {
+        ui->cartTableView->setModel(m_productModel);
+        ui->cartTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+        ui->cartTableView->setAlternatingRowColors(true);
+        ui->cartTableView->setSortingEnabled(true);
+        connect(ui->cartTableView, &QTableView::doubleClicked, this, &MainWindow::onProductDoubleClicked);
 
-QWidget* MainWindow::createRecommendationArea()
-{
-    m_recommendationGroup = new QGroupBox("智能推荐");
-    QVBoxLayout* layout = new QVBoxLayout(m_recommendationGroup);
-    
-    // 推荐说明
-    QLabel* infoLabel = new QLabel("基于当前购物车的AI推荐:");
-    infoLabel->setWordWrap(true);
-    infoLabel->setStyleSheet("QLabel { color: #666; font-size: 12px; }");
-    layout->addWidget(infoLabel);
-    
-    // 推荐列表
-    m_recommendationList = new QListWidget;
-    m_recommendationList->setMaximumHeight(300);
-    layout->addWidget(m_recommendationList);
-    
-    // 添加推荐按钮
-    m_addRecommendationButton = new QPushButton("添加到购物车");
-    m_addRecommendationButton->setEnabled(false);
-    layout->addWidget(m_addRecommendationButton);
-    
-    layout->addStretch();
-    
-    return m_recommendationGroup;
-}
+        m_cartDelegate = new CartDelegate(this);
+        ui->cartTableView->setItemDelegate(m_cartDelegate);
 
-QWidget* MainWindow::createBarcodeScanArea()
-{
-    m_barcodeGroup = new QGroupBox("条码扫描");
-    QVBoxLayout* layout = new QVBoxLayout(m_barcodeGroup);
+        ui->cartTableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+        ui->cartTableView->setColumnWidth(1, 100);
+        ui->cartTableView->setColumnWidth(2, 120);
+        ui->cartTableView->setColumnWidth(3, 120);
+        ui->cartTableView->setColumnWidth(4, 100);
+        ui->cartTableView->horizontalHeader()->setStretchLastSection(true);
+    }
+    if (ui->removeFromCartButton) {
+        ui->removeFromCartButton->setVisible(false);
+    }
     
-    // 扫描状态
-    m_scannerStatus = new QLabel("扫描仪状态: 就绪");
-    m_scannerStatus->setStyleSheet("QLabel { color: #2E8B57; }");
-    layout->addWidget(m_scannerStatus);
+    // Configure recommendation list
+    if (ui->recommendationListWidget) {
+        ui->recommendationListWidget->setFlow(QListView::LeftToRight);
+        ui->recommendationListWidget->setWrapping(false);
+        ui->recommendationListWidget->setSpacing(10);
+        ui->recommendationListWidget->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        ui->recommendationListWidget->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    }
     
-    // 摄像头预览区域（占位符）
-    m_cameraWidget = new QWidget;
-    m_cameraWidget->setMinimumHeight(150);
-    m_cameraWidget->setStyleSheet("QWidget { background-color: #f0f0f0; border: 1px solid #ccc; }");
-    layout->addWidget(m_cameraWidget);
+    // 延迟调用这些函数，确保 UI 完全初始化
+    QTimer::singleShot(0, this, [this]() {
+        // Product display is updated asynchronously when the allProductsChanged signal is emitted.
+        updateRecommendationDisplay();
+    });
     
-    // 手动输入条码
-    QHBoxLayout* manualLayout = new QHBoxLayout;
-    manualLayout->addWidget(new QLabel("手动输入:"));
-    m_manualBarcodeEdit = new QLineEdit;
-    m_manualBarcodeEdit->setPlaceholderText("输入条码并按回车");
-    m_manualBarcodeButton = new QPushButton("确定");
-    manualLayout->addWidget(m_manualBarcodeEdit);
-    manualLayout->addWidget(m_manualBarcodeButton);
-    layout->addLayout(manualLayout);
-    
-    return m_barcodeGroup;
+    qDebug() << "MainWindow::initializeUI 完成";
 }
 
 void MainWindow::connectSignals()
 {
-    // 销售相关信号
-    connect(m_newSaleButton, &QPushButton::clicked, this, &MainWindow::onNewSale);
-    connect(m_paymentButton, &QPushButton::clicked, this, &MainWindow::onProcessPayment);
-    connect(m_clearSaleButton, &QPushButton::clicked, this, &MainWindow::onClearSale);
-    connect(m_removeItemButton, &QPushButton::clicked, this, &MainWindow::onRemoveItem);
-    connect(m_quantitySpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &MainWindow::onItemQuantityChanged);
+    if (ui->newSaleButton) connect(ui->newSaleButton, &QPushButton::clicked, this, &MainWindow::onNewSale);
+    if (ui->checkoutButton) connect(ui->checkoutButton, &QPushButton::clicked, this, &MainWindow::onProcessPayment);
+    if (ui->clearCartButton) connect(ui->clearCartButton, &QPushButton::clicked, this, &MainWindow::onClearSale);
+    if (ui->addToCartButton) connect(ui->addToCartButton, &QPushButton::clicked, this, &MainWindow::onAddToCart);
+    if (ui->manageProductsButton) connect(ui->manageProductsButton, &QPushButton::clicked, this, &MainWindow::onManageProducts);
+    if (ui->printReceiptButton) connect(ui->printReceiptButton, &QPushButton::clicked, this, &MainWindow::onPrintReceipt);
+    if (ui->reportsButton) connect(ui->reportsButton, &QPushButton::clicked, this, &MainWindow::onShowStatistics);
+    if (ui->searchLineEdit) connect(ui->searchLineEdit, &QLineEdit::returnPressed, this, &MainWindow::onSearchOrScan);
+    if (ui->searchButton) connect(ui->searchButton, &QPushButton::clicked, this, &MainWindow::onSearchOrScan);
+    if (ui->startScanButton) connect(ui->startScanButton, &QPushButton::clicked, this, &MainWindow::onStartScan);
+    if (ui->stopScanButton) connect(ui->stopScanButton, &QPushButton::clicked, this, &MainWindow::onStopScan);
+    connect(m_barcodeScanner.get(), &BarcodeScanner::barcodeDetected, this, &MainWindow::onBarcodeScanned);
+    if (ui->refreshRecommendationButton) connect(ui->refreshRecommendationButton, &QPushButton::clicked, this, &MainWindow::onRefreshRecommendations);
+    if (ui->discountButton) connect(ui->discountButton, &QPushButton::clicked, this, &MainWindow::onApplyDiscount);
+
+    // This is a robust connection. When a sale is structurally changed (item added/removed),
+    // CheckoutController will emit saleUpdated(), which triggers a full refresh.
+    connect(m_checkoutController.get(), &CheckoutController::saleUpdated, this, &MainWindow::updateCartDisplay);
     
-    // 商品管理信号
-    connect(m_addProductButton, &QPushButton::clicked, this, &MainWindow::onAddProduct);
-    connect(m_editProductButton, &QPushButton::clicked, this, &MainWindow::onEditProduct);
-    connect(m_deleteProductButton, &QPushButton::clicked, this, &MainWindow::onDeleteProduct);
-    connect(m_refreshProductButton, &QPushButton::clicked, this, &MainWindow::onRefreshProducts);
-    
-    // 条码扫描信号
-    connect(m_manualBarcodeEdit, &QLineEdit::returnPressed, this, &MainWindow::onManualBarcodeEntry);
-    connect(m_manualBarcodeButton, &QPushButton::clicked, this, &MainWindow::onManualBarcodeEntry);
-    connect(m_barcodeScanner.get(), &BarcodeScanner::barcodeDetected,
-            this, &MainWindow::onBarcodeScanned);
-    
-    // 推荐系统信号
-    connect(m_addRecommendationButton, &QPushButton::clicked, this, &MainWindow::onRecommendationSelected);
-    connect(m_recommendationList, &QListWidget::itemSelectionChanged,
-            [this]() { m_addRecommendationButton->setEnabled(m_recommendationList->currentItem() != nullptr); });
-    
-    // 控制器信号
-    connect(m_checkoutController.get(), &CheckoutController::saleUpdated,
-            this, &MainWindow::onSaleUpdated);
+    // Delegate and model signals
+    connect(m_cartDelegate, &CartDelegate::removeItem, this, &MainWindow::onRemoveItemFromCart);
+    connect(m_productModel, &QStandardItemModel::itemChanged, this, &MainWindow::onItemQuantityChanged);
+
+    // Product Manager signal
+    connect(m_productManager.get(), &ProductManager::allProductsChanged, this, &MainWindow::updateProductDisplay);
+    connect(m_productManager.get(), &ProductManager::productFoundByBarcode, this, &MainWindow::onProductFoundByBarcode);
+
+    if (ui->actionNewSale) connect(ui->actionNewSale, &QAction::triggered, this, &MainWindow::onNewSale);
+    if (ui->actionManageProducts) connect(ui->actionManageProducts, &QAction::triggered, this, &MainWindow::onManageProducts);
+    if (ui->actionRefreshProducts) connect(ui->actionRefreshProducts, &QAction::triggered, this, &MainWindow::onRefreshProducts);
+    if (ui->actionExit) connect(ui->actionExit, &QAction::triggered, this, &QWidget::close);
+    if (ui->actionAbout) connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::onAbout);
 }
+
+
 
 void MainWindow::setupStyleSheet()
 {
-    QWidget::setStyleSheet(R"(
-        QMainWindow {
-            background-color: #f5f5f5;
-        }
-        QGroupBox {
-            font-weight: bold;
-            border: 2px solid #cccccc;
-            border-radius: 8px;
-            margin-top: 1ex;
-            padding-top: 10px;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            left: 10px;
-            padding: 0 5px 0 5px;
-        }
-        QPushButton {
-            background-color: #e1e1e1;
-            border: 1px solid #999999;
-            border-radius: 4px;
-            padding: 8px;
-            font-size: 12px;
-        }
-        QPushButton:hover {
-            background-color: #d4d4d4;
-        }
-        QPushButton:pressed {
-            background-color: #b8b8b8;
-        }
-        QListWidget, QTableView {
-            border: 1px solid #d0d0d0;
-            border-radius: 4px;
-            background-color: white;
-        }
-        QLineEdit, QSpinBox {
-            border: 1px solid #d0d0d0;
-            border-radius: 4px;
-            padding: 4px;
-        }
-    )");
+    this->setStyleSheet(
+        "/* ---- Global ---- */"
+        "QWidget { font-family: -apple-system, sans-serif; color: #333; }"
+        "QMainWindow, QDialog { background-color: #f4f5f7; }"
+
+        "/* ---- Typography ---- */"
+        "QLabel { background-color: transparent; color: #333; }"
+        "QLabel#totalValueLabel { font-size: 20px; font-weight: bold; color: #d32f2f; }"
+        "QLabel#subtotalValueLabel, QLabel#discountValueLabel { font-size: 16px; }"
+
+        "/* ---- Buttons ---- */"
+        "QPushButton { background-color: #ffffff; border: 1px solid #dcdcdc; border-radius: 4px; padding: 8px 12px; }"
+        "QPushButton:hover { background-color: #f0f0f0; }"
+        "QPushButton:pressed { background-color: #e0e0e0; border-style: inset; }"
+        "QPushButton:disabled { color: #b0b0b0; background-color: #f5f5f5; }"
+        "QPushButton#okButton, QPushButton#processButton, QPushButton#checkoutButton { background-color: #28a745; color: white; font-weight: bold; }"
+        "QPushButton#okButton:hover, QPushButton#processButton:hover, QPushButton#checkoutButton:hover { background-color: #218838; }"
+
+        "/* ---- Inputs & Views ---- */"
+        "QLineEdit, QListWidget, QTableView, QTextEdit, QSpinBox, QDoubleSpinBox { background-color: #ffffff; color: #333; border: 1px solid #dcdcdc; border-radius: 4px; padding: 5px; }"
+        "QLineEdit:focus, QTableView:focus, QTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { border-color: #80bdff; }"
+        "QTableView { gridline-color: #e0e0e0; alternate-background-color: #f9f9f9; }"
+        "QHeaderView::section { background-color: #f8f9fa; padding: 6px; border: 1px solid #dee2e6; font-weight: bold; }"
+
+        "/* ---- Menus & Toolbars ---- */"
+        "QMenuBar { background-color: #e9ecef; border-bottom: 1px solid #dcdcdc; }"
+        "QMenuBar::item { color: white; padding: 4px 10px; }"
+        "QMenuBar::item:selected, QMenuBar::item:pressed { background-color: #d4dae0; color: #000; }"
+        "QMenu { background-color: #ffffff; border: 1px solid #ced4da; }"
+        "QMenu::item:selected { background-color: #007bff; color: white; }"
+
+        "/* ---- Containers ---- */"
+        "QGroupBox { background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 5px; margin-top: 10px; }"
+        "QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top center; padding: 0 10px; color: #495057; }"
+        
+        "/* ---- Custom Widgets ---- */"
+        "RecommendationItemWidget { background-color: white; border-radius: 8px; border: 1px solid #e0e0e0; }"
+        "RecommendationItemWidget QLabel { font-size: 13px; }"
+        "RecommendationItemWidget QPushButton { font-size: 12px; padding: 5px; }"
+
+        "/* ---- ScrollBars ---- */"
+        "QScrollBar:vertical, QScrollBar:horizontal { border: none; background: #f0f0f0; width: 12px; margin: 0px; }"
+        "QScrollBar::handle { background: #c0c0c0; border-radius: 6px; min-height: 20px; }"
+        "QScrollBar::handle:hover { background: #a0a0a0; }"
+    );
 }
 
 void MainWindow::onNewSale()
@@ -455,8 +244,8 @@ void MainWindow::onNewSale()
     if (m_currentSale) {
         // 先通知CheckoutController断开信号连接
         m_checkoutController->setCurrentSale(nullptr);
-        delete m_currentSale;
-        qDebug() << "MainWindow::onNewSale deleted old m_currentSale";
+        m_currentSale->deleteLater(); // Use deleteLater for safety with QObjects
+        qDebug() << "MainWindow::onNewSale scheduled old m_currentSale for deletion";
     }
     m_currentSale = new Sale(this);
     qDebug() << "MainWindow::onNewSale created new m_currentSale:" << m_currentSale;
@@ -470,17 +259,9 @@ void MainWindow::onNewSale()
 
 void MainWindow::onSaleUpdated()
 {
-    qDebug() << "MainWindow::onSaleUpdated called, m_currentSale:" << m_currentSale;
-    updateCartDisplay();
-    
-    // 更新AI推荐
-    if (m_currentSale && !m_currentSale->isEmpty()) {
-        QList<int> productIds;
-        for (auto* item : m_currentSale->getItems()) {
-            productIds.append(item->getProduct()->getProductId());
-        }
-        onRecommendationsUpdated(m_aiRecommender->getRecommendations(productIds));
-    }
+    // This slot is now disconnected and unused, but kept for safety.
+    // The main connection is now directly from CheckoutController::saleUpdated to updateCartDisplay.
+    qDebug() << "onSaleUpdated (legacy) called. This should not happen frequently.";
 }
 
 void MainWindow::onBarcodeScanned(const QString& barcode)
@@ -491,23 +272,163 @@ void MainWindow::onBarcodeScanned(const QString& barcode)
         onNewSale();
     }
     
-    auto product = m_productManager->getProductByBarcode(barcode);
+    // Asynchronously get product by barcode
+    m_productManager->getProductByBarcode(barcode);
+}
+
+void MainWindow::onProductFoundByBarcode(Product* product, const QString& barcode)
+{
     if (product) {
-        m_checkoutController->addItemToSale(product, m_quantitySpinBox->value());
+        m_checkoutController->addItemToSale(product, 1);
         showSuccessMessage(QString("添加商品: %1").arg(product->getName()));
     } else {
         showErrorMessage(QString("未找到条码为 %1 的商品").arg(barcode));
     }
 }
 
-void MainWindow::onManualBarcodeEntry()
+void MainWindow::onSearchProduct()
 {
-    QString barcode = m_manualBarcodeEdit->text().trimmed();
-    if (!barcode.isEmpty()) {
-        onBarcodeScanned(barcode);
-        m_manualBarcodeEdit->clear();
+    qDebug() << "onSearchProduct triggered";
+    QString searchText = ui->searchLineEdit->text().trimmed();
+    if (!searchText.isEmpty()) {
+        // 搜索商品逻辑
+        auto products = m_productManager->searchProducts(searchText);
+        updateProductDisplay(products);
+        showSuccessMessage(QString("找到 %1 个商品").arg(products.size()));
+    } else {
+        onRefreshProducts();
     }
 }
+
+void MainWindow::onSearchOrScan()
+{
+    QString input = ui->searchLineEdit->text().trimmed();
+    if (input.isEmpty()) {
+        onRefreshProducts(); // If search is cleared, show all products
+        return;
+    }
+
+    // Heuristic to decide if it's a barcode or search term
+    bool isLikelyBarcode = input.toLongLong() > 0 && (input.length() == 8 || input.length() == 12 || input.length() == 13);
+
+    if (isLikelyBarcode) {
+        onBarcodeScanned(input);
+        ui->searchLineEdit->clear(); // Clear after successful scan
+    } else {
+        onSearchProduct(); // It's a search
+    }
+}
+
+void MainWindow::onStartScan()
+{
+    qDebug() << "onStartScan triggered";
+    if (m_barcodeScanner->startScanning()) {
+        ui->startScanButton->setEnabled(false);
+        ui->stopScanButton->setEnabled(true);
+        if(ui->scanStatusLabel) ui->scanStatusLabel->setText("扫描状态: 扫描中");
+        showSuccessMessage("开始扫描条码");
+    } else {
+        showErrorMessage("启动扫描器失败");
+    }
+}
+
+void MainWindow::onStopScan()
+{
+    qDebug() << "onStopScan triggered";
+    m_barcodeScanner->stopScanning();
+    ui->startScanButton->setEnabled(true);
+    ui->stopScanButton->setEnabled(false);
+    if(ui->scanStatusLabel) ui->scanStatusLabel->setText("扫描状态: 已停止");
+    showSuccessMessage("停止扫描");
+}
+
+void MainWindow::onAddToCart()
+{
+    qDebug() << "onAddToCart triggered";
+    // 从商品列表中选择商品添加到购物车
+    auto currentItem = ui->productListWidget->currentItem();
+    if (currentItem) {
+        bool ok;
+        int productId = currentItem->data(Qt::UserRole).toInt(&ok);
+        if(ok) {
+            auto product = m_productManager->getProductById(productId);
+            if (product && m_currentSale) {
+                bool quantityOk;
+                int quantity = QInputDialog::getInt(this, "输入数量", 
+                                                    QString("为商品“%1”输入数量:").arg(product->getName()),
+                                                    1, 1, product->getStockQuantity(), 1, &quantityOk);
+
+                if (quantityOk) {
+                    m_checkoutController->addItemToSale(product, quantity);
+                    showSuccessMessage(QString("添加 %1 个“%2”到购物车").arg(quantity).arg(product->getName()));
+                }
+            }
+        }
+    }
+}
+
+void MainWindow::onApplyDiscount()
+{
+    if (!m_currentSale || m_currentSale->isEmpty()) {
+        showErrorMessage("购物车为空，无法应用折扣");
+        return;
+    }
+    
+    bool ok;
+    double discountPercent = QInputDialog::getDouble(this, "应用折扣", 
+                                                   "请输入折扣百分比 (0-100):", 
+                                                   0.0, 0.0, 100.0, 2, &ok);
+    if (ok) {
+        m_currentSale->setDiscountAmount(m_currentSale->getTotalAmount() * discountPercent / 100.0);
+        updateCartDisplay();
+        showSuccessMessage(QString("应用折扣: %1%%").arg(discountPercent));
+    }
+}
+
+void MainWindow::onPrintReceipt()
+{
+    if (!m_currentSale || m_currentSale->isEmpty()) {
+        showErrorMessage("没有销售记录可打印");
+        return;
+    }
+    
+    // 打印小票逻辑
+    showSuccessMessage("打印小票功能");
+}
+
+void MainWindow::onRefreshRecommendations()
+{
+    if (m_currentSale && !m_currentSale->isEmpty()) {
+        QList<int> productIds;
+        for (auto* item : m_currentSale->getItems()) {
+            productIds.append(item->getProduct()->getProductId());
+        }
+        auto recommendations = m_aiRecommender->getRecommendations(productIds);
+        updateRecommendationDisplay(recommendations);
+    } else {
+        // If cart is empty, get popular recommendations
+        auto recommendations = m_aiRecommender->getPopularRecommendations(5);
+        updateRecommendationDisplay(recommendations);
+    }
+}
+
+void MainWindow::onRecommendationAddToCart(int productId)
+{
+    auto product = m_productManager->getProductById(productId);
+    if (product && m_currentSale) {
+        m_checkoutController->addItemToSale(product, 1);
+        showSuccessMessage(QString("添加推荐商品: %1").arg(product->getName()));
+    }
+}
+
+void MainWindow::onRecommendationSelected()
+{
+    // This function is required to exist to fix a linker error,
+    // but its functionality is handled by onRecommendationAddToCart.
+    // A recommendation item widget is not selectable in the same way
+    // a regular list item is; it's activated by clicking the "Add to Cart" button.
+}
+
 
 void MainWindow::onProcessPayment()
 {
@@ -530,142 +451,165 @@ void MainWindow::onProcessPayment()
 
 void MainWindow::updateCartDisplay()
 {
-    qDebug() << "MainWindow::updateCartDisplay called, m_cartList:" << m_cartList << ", m_totalLabel:" << m_totalLabel;
+    qDebug() << "MainWindow::updateCartDisplay called, m_productTable:" << ui->cartTableView << ", m_totalLabel:" << ui->totalValueLabel;
     
-    if (!m_cartList) {
-        qDebug() << "MainWindow::updateCartDisplay m_cartList is null, skipping";
+    if (!ui->cartTableView || !m_productModel) {
+        qDebug() << "MainWindow::updateCartDisplay cartTableView or m_productModel is null, skipping";
         return;
     }
     
-    m_cartList->clear();
+    m_productModel->clear();
+    m_productModel->setHorizontalHeaderLabels({"商品名称", "数量", "单价", "小计", "操作"});
     
+    if (m_currentSale) {
+        for (auto* item : m_currentSale->getItems()) {
+            if (item && item->getProduct()) {
+                QList<QStandardItem *> rowItems;
+                auto nameItem = new QStandardItem(item->getProduct()->getName());
+                nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
+
+                auto quantityItem = new QStandardItem(QString::number(item->getQuantity()));
+                
+                auto priceItem = new QStandardItem(QString("¥%1").arg(item->getProduct()->getPrice(), 0, 'f', 2));
+                priceItem->setFlags(priceItem->flags() & ~Qt::ItemIsEditable);
+                
+                auto subtotalItem = new QStandardItem(QString("¥%1").arg(item->getSubtotal(), 0, 'f', 2));
+                subtotalItem->setFlags(subtotalItem->flags() & ~Qt::ItemIsEditable);
+
+                auto actionItem = new QStandardItem();
+                actionItem->setFlags(actionItem->flags() & ~Qt::ItemIsEditable);
+
+                rowItems << nameItem << quantityItem << priceItem << subtotalItem << actionItem;
+                m_productModel->appendRow(rowItems);
+            }
+        }
+    }
+    
+    updateTotals();
+}
+
+void MainWindow::updateTotals()
+{
     if (!m_currentSale) {
-        if (m_totalLabel) {
-            m_totalLabel->setText("总计: ¥0.00");
-        }
+        if (ui->subtotalValueLabel) ui->subtotalValueLabel->setText("¥0.00");
+        if (ui->discountValueLabel) ui->discountValueLabel->setText("¥0.00");
+        if (ui->totalValueLabel) ui->totalValueLabel->setText("¥0.00");
+        return;
+    }
+
+    if (ui->subtotalValueLabel) {
+        ui->subtotalValueLabel->setText(QString("¥%1").arg(m_currentSale->getTotalAmount(), 0, 'f', 2));
+    }
+    if (ui->discountValueLabel) {
+        ui->discountValueLabel->setText(QString("-¥%1").arg(m_currentSale->getDiscountAmount(), 0, 'f', 2));
+    }
+    if (ui->totalValueLabel) {
+        ui->totalValueLabel->setText(QString("¥%1").arg(m_currentSale->getFinalAmount(), 0, 'f', 2));
+    }
+}
+
+void MainWindow::onProductDoubleClicked(const QModelIndex& index)
+{
+    qDebug() << "onProductDoubleClicked triggered, index:" << index;
+    if (!index.isValid()) {
         return;
     }
     
-    for (auto* item : m_currentSale->getItems()) {
-        if (item && item->getProduct()) {
-            QString itemText = QString("%1 x %2 = ¥%3")
-                              .arg(item->getProduct()->getName())
-                              .arg(item->getQuantity())
-                              .arg(item->getSubtotal(), 0, 'f', 2);
-            m_cartList->addItem(itemText);
+    // 从商品列表获取选中的商品名称
+    if (ui->productListWidget && ui->productListWidget->currentItem()) {
+        QString productName = ui->productListWidget->currentItem()->text();
+        auto product = m_productManager->getProductByName(productName);
+        if (product) {
+            qDebug() << "双击添加商品，条码:" << product->getBarcode();
+            onBarcodeScanned(product->getBarcode());
         }
     }
+}
+
+void MainWindow::updateProductDisplay(const QList<Product*>& products)
+{
+    qDebug() << "updateProductDisplay called with products count:" << products.size();
+    if (!ui->productListWidget) {
+        qDebug() << "updateProductDisplay: productListWidget is null";
+        return;
+    }
     
-    if (m_totalLabel) {
-        m_totalLabel->setText(QString("总计: ¥%1").arg(m_currentSale->getFinalAmount(), 0, 'f', 2));
+    ui->productListWidget->clear();
+    
+    for (auto* product : products) {
+        if (product) {
+            QListWidgetItem* item = new QListWidgetItem(product->getName(), ui->productListWidget);
+            item->setData(Qt::UserRole, product->getProductId());
+        }
+    }
+}
+
+void MainWindow::showErrorMessage(const QString& message)
+{
+    if (ui->statusbar) {
+        ui->statusbar->setStyleSheet("QStatusBar { color: red; }");
+        ui->statusbar->showMessage(QString("错误: %1").arg(message), 5000);
+    }
+    
+    // QMessageBox::warning(this, "错误", message);
+}
+
+void MainWindow::showSuccessMessage(const QString& message)
+{
+    qDebug() << "MainWindow::showSuccessMessage called:" << message;
+    if (ui->statusbar) {
+        ui->statusbar->setStyleSheet("QStatusBar { color: green; }");
+        ui->statusbar->showMessage(message, 3000);
     }
 }
 
 void MainWindow::onRefreshProducts()
 {
-    updateProductDisplay();
-}
-
-void MainWindow::onProductDoubleClicked(const QModelIndex& index)
-{
-    if (!index.isValid()) {
-        return;
-    }
-    
-    // 获取选中商品的条码（第2列，索引为1）
-    QString barcode = m_productModel->item(index.row(), 1)->text();
-    
-    if (!barcode.isEmpty()) {
-        qDebug() << "双击添加商品，条码:" << barcode;
-        onBarcodeScanned(barcode);
-    }
-}
-
-void MainWindow::updateProductDisplay()
-{
-    m_productModel->clear();
-    m_productModel->setHorizontalHeaderLabels({"ID", "条码", "名称", "价格", "库存", "分类"});
-    
-    auto products = m_productManager->getAllProducts();
-    for (const auto& product : products) {
-        QList<QStandardItem*> row;
-        row << new QStandardItem(QString::number(product->getProductId()));
-        row << new QStandardItem(product->getBarcode());
-        row << new QStandardItem(product->getName());
-        row << new QStandardItem(QString("¥%1").arg(product->getPrice(), 0, 'f', 2));
-        row << new QStandardItem(QString::number(product->getStockQuantity()));
-        row << new QStandardItem(product->getCategory());
-        
-        m_productModel->appendRow(row);
-    }
-    
-    // 调整列宽
-    m_productTable->resizeColumnsToContents();
-    
-    qDebug() << "商品表格更新完成，共" << products.size() << "个商品";
-}
-
-void MainWindow::showErrorMessage(const QString& message)
-{
-    m_statusLabel->setText(QString("错误: %1").arg(message));
-    m_statusLabel->setStyleSheet("QLabel { color: red; }");
-    QTimer::singleShot(5000, [this]() {
-        m_statusLabel->setText("就绪");
-        m_statusLabel->setStyleSheet("");
-    });
-    
-    QMessageBox::warning(this, "错误", message);
-}
-
-void MainWindow::showSuccessMessage(const QString& message)
-{
-    qDebug() << "MainWindow::showSuccessMessage called:" << message << ", m_statusLabel:" << m_statusLabel;
-    if (!m_statusLabel) {
-        qDebug() << "MainWindow::showSuccessMessage m_statusLabel is null, skipping";
-        return;
-    }
-    m_statusLabel->setText(message);
-    m_statusLabel->setStyleSheet("QLabel { color: green; }");
-    QTimer::singleShot(3000, [this]() {
-        if (m_statusLabel) {
-            m_statusLabel->setText("就绪");
-            m_statusLabel->setStyleSheet("");
-        }
-    });
-}
-
-void MainWindow::updateStatusBar()
-{
-    m_timeLabel->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
+    m_productManager->getAllProducts();
+    showSuccessMessage("正在刷新商品列表...");
 }
 
 // 占位符实现（其他槽函数）
-void MainWindow::onItemQuantityChanged()
+void MainWindow::onItemQuantityChanged(QStandardItem *item)
 {
-    QList<QListWidgetItem*> selectedItems = m_cartList->selectedItems();
-    if (selectedItems.isEmpty() || !m_currentSale) {
+    if (!m_currentSale || !item || item->column() != 1) {
+        return; 
+    }
+
+    bool ok;
+    int newQuantity = item->text().toInt(&ok);
+    int row = item->row();
+    SaleItem* saleItem = m_currentSale->getItems().at(row);
+
+    if (!ok || newQuantity < 0) {
+        // Revert invalid edits without triggering a full refresh
+        QSignalBlocker blocker(m_productModel);
+        item->setText(QString::number(saleItem->getQuantity()));
         return;
     }
 
-    int selectedRow = m_cartList->row(selectedItems.first());
-    if (selectedRow >= 0 && selectedRow < m_currentSale->getItems().size()) {
-        SaleItem* item = m_currentSale->getItems().at(selectedRow);
-        int newQuantity = m_quantitySpinBox->value();
-        m_checkoutController->updateItemQuantity(item->getProduct()->getProductId(), newQuantity);
-    }
+    // This directly updates the model, which triggers signals that bubble up.
+    m_checkoutController->updateItemQuantity(saleItem->getProduct()->getProductId(), newQuantity);
+    
+    // We only need to update totals, as the view itself is already edited.
+    updateTotals();
 }
 
 void MainWindow::onRemoveItem()
 {
-    QList<QListWidgetItem*> selectedItems = m_cartList->selectedItems();
-    if (selectedItems.isEmpty() || !m_currentSale) {
-        showErrorMessage("请先在购物车中选择要移除的商品");
+    // This slot is now obsolete and replaced by onRemoveItemFromCart.
+    // The button is hidden in initializeUI.
+}
+
+void MainWindow::onRemoveItemFromCart(const QModelIndex &index)
+{
+    if (!index.isValid() || !m_currentSale) {
         return;
     }
 
-    int selectedRow = m_cartList->row(selectedItems.first());
-    if (selectedRow >= 0 && selectedRow < m_currentSale->getItems().size()) {
-        SaleItem* item = m_currentSale->getItems().at(selectedRow);
+    int row = index.row();
+    if (row >= 0 && row < m_currentSale->getItems().size()) {
+        SaleItem* item = m_currentSale->getItems().at(row);
         m_checkoutController->removeItemFromSale(item->getProduct()->getProductId());
         showSuccessMessage("商品已移除");
     }
@@ -673,111 +617,61 @@ void MainWindow::onRemoveItem()
 
 void MainWindow::onClearSale()
 {
+    qDebug() << "onClearSale triggered";
     if (m_currentSale) {
         m_checkoutController->cancelSale();
         updateCartDisplay();
-        m_recommendationList->clear();
+        if (ui->recommendationListWidget) {
+            ui->recommendationListWidget->clear();
+        }
         showSuccessMessage("购物车已清空");
     }
 }
 
-void MainWindow::onAddProduct()
+void MainWindow::onManageProducts()
 {
-    qDebug() << "MainWindow::onAddProduct 开始";
-    ProductDialog dialog(this);
-    qDebug() << "MainWindow::onAddProduct ProductDialog 创建完成";
-    dialog.show();
-    qDebug() << "MainWindow::onAddProduct ProductDialog show() 已调用";
-    // 不再处理exec/Accepted逻辑，测试只验证show不崩溃
-    qDebug() << "MainWindow::onAddProduct 结束";
-}
-
-void MainWindow::onEditProduct()
-{
-    QModelIndexList selection = m_productTable->selectionModel()->selectedRows();
-    if (selection.isEmpty()) {
-        showErrorMessage("请先选择要编辑的商品");
-        return;
-    }
-
-    int productId = m_productModel->item(selection.first().row(), 0)->text().toInt();
-    Product* product = m_productManager->getProductById(productId);
-
-    if (product) {
-        ProductDialog dialog(product, this);
-        if (dialog.exec() == QDialog::Accepted) {
-            auto updatedProduct = dialog.getProduct();
-            if (updatedProduct) {
-                if (m_productManager->updateProduct(updatedProduct.release())) {
-                    showSuccessMessage("商品更新成功");
-                    onRefreshProducts();
-                } else {
-                    showErrorMessage("更新商品失败");
-                }
-            }
-        }
-    } else {
-        showErrorMessage("找不到所选商品");
-    }
-}
-
-void MainWindow::onDeleteProduct()
-{
-    QModelIndexList selection = m_productTable->selectionModel()->selectedRows();
-    if (selection.isEmpty()) {
-        showErrorMessage("请先选择要删除的商品");
-        return;
-    }
-
-    int productId = m_productModel->item(selection.first().row(), 0)->text().toInt();
-    QString productName = m_productModel->item(selection.first().row(), 2)->text();
-
-    QMessageBox::StandardButton reply = QMessageBox::question(
-        this, "确认删除", QString("确定要删除商品 “%1” 吗？").arg(productName),
-        QMessageBox::Yes | QMessageBox::No
-    );
-
-    if (reply == QMessageBox::Yes) {
-        if (m_productManager->deleteProduct(productId)) {
-            showSuccessMessage("商品删除成功");
-            onRefreshProducts();
-        } else {
-            showErrorMessage("删除商品失败");
-        }
-    }
-}
-
-void MainWindow::onRecommendationSelected()
-{
-    QList<QListWidgetItem*> selectedItems = m_recommendationList->selectedItems();
-    if (selectedItems.isEmpty()) {
-        return;
-    }
-
-    int productId = selectedItems.first()->data(Qt::UserRole).toInt();
-    Product* product = m_productManager->getProductById(productId);
-    if (product) {
-        m_checkoutController->addItemToSale(product, 1);
-        showSuccessMessage(QString("已添加推荐商品: %1").arg(product->getName()));
-    }
+    ProductManagementDialog dialog(m_productManager.get(), this);
+    dialog.exec();
+    // Refresh product list in main window after dialog is closed
+    onRefreshProducts();
 }
 
 void MainWindow::onRecommendationsUpdated(const QList<int>& productIds)
 {
-    m_recommendationList->clear();
-    if (productIds.isEmpty()) {
-        m_recommendationList->addItem("暂无推荐");
-        m_recommendationList->setEnabled(false);
+    qDebug() << "onRecommendationsUpdated triggered, productIds:" << productIds;
+    updateRecommendationDisplay(productIds);
+}
+
+void MainWindow::updateRecommendationDisplay()
+{
+    // Update with popular items if the cart is empty
+    if (m_currentSale == nullptr || m_currentSale->isEmpty()) {
+        updateRecommendationDisplay(m_aiRecommender->getPopularRecommendations(5));
+    } else {
+        // This case will be triggered when a sale is updated.
+        // The list of product IDs should be passed from onSaleUpdated -> onRecommendationsUpdated
+    }
+}
+
+void MainWindow::updateRecommendationDisplay(const QList<int>& productIds)
+{
+    if (!ui->recommendationListWidget) {
+        qDebug() << "updateRecommendationDisplay: recommendationListWidget is null";
         return;
     }
-
-    m_recommendationList->setEnabled(true);
-    for (int id : productIds) {
-        auto product = m_productManager->getProductById(id);
+    
+    ui->recommendationListWidget->clear();
+    
+    for (int productId : productIds) {
+        auto product = m_productManager->getProductById(productId);
         if (product) {
-            QListWidgetItem* item = new QListWidgetItem(product->getName());
-            item->setData(Qt::UserRole, id);
-            m_recommendationList->addItem(item);
+            auto* itemWidget = new RecommendationItemWidget(product);
+            auto* listItem = new QListWidgetItem(ui->recommendationListWidget);
+            listItem->setSizeHint(itemWidget->sizeHint());
+            ui->recommendationListWidget->addItem(listItem);
+            ui->recommendationListWidget->setItemWidget(listItem, itemWidget);
+
+            connect(itemWidget, &RecommendationItemWidget::addToCartClicked, this, &MainWindow::onRecommendationAddToCart);
         }
     }
 }
@@ -794,6 +688,13 @@ void MainWindow::onShowSettings()
 
 void MainWindow::onAbout() {
     QMessageBox::about(this, "关于", "智能超市收银系统 v1.0\n基于C++/Qt开发\n集成条码识别和AI推荐功能");
+}
+
+void MainWindow::updateTime()
+{
+    if (ui->currentTimeLabel) {
+        ui->currentTimeLabel->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

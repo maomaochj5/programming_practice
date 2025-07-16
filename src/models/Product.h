@@ -49,6 +49,7 @@ public:
     double getPrice() const { return m_price; }
     int getStockQuantity() const { return m_stockQuantity; }
     QString getCategory() const { return m_category; }
+    QString getImagePath() const { return m_imagePath; }
     
     // Setter 方法
     void setProductId(int productId);
@@ -58,6 +59,7 @@ public:
     void setPrice(double price);
     void setStockQuantity(int stockQuantity);
     void setCategory(const QString& category);
+    void setImagePath(const QString& imagePath);
     
     /**
      * @brief 检查商品是否有效
@@ -110,6 +112,7 @@ private:
     double m_price;         ///< 价格
     int m_stockQuantity;    ///< 库存数量
     QString m_category;     ///< 商品分类
+    QString m_imagePath;    ///< 商品图片路径
 };
 
 #endif // PRODUCT_H

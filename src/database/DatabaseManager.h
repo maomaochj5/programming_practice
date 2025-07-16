@@ -6,6 +6,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QMutex>
+#include <QFutureWatcher>
 #include <memory>
 
 // 前向声明
@@ -57,7 +58,7 @@ public:
      * @param product 商品对象
      * @return 如果成功返回true
      */
-    bool saveProduct(Product* product);
+    void saveProduct(const Product& product);
 
     /**
      * @brief 根据ID获取商品
@@ -71,20 +72,20 @@ public:
      * @param barcode 条形码
      * @return 商品智能指针，如果未找到返回nullptr
      */
-    std::unique_ptr<Product> getProductByBarcode(const QString& barcode);
+    void getProductByBarcode(const QString& barcode);
 
     /**
      * @brief 获取所有商品
      * @return 商品指针列表（由调用方负责释放）
      */
-    QList<Product*> getAllProducts();
+    void getAllProducts();
 
     /**
      * @brief 删除商品
      * @param productId 商品ID
      * @return 如果成功返回true
      */
-    bool deleteProduct(int productId);
+    void deleteProduct(int productId);
 
     /**
      * @brief 更新商品库存
@@ -190,7 +191,18 @@ signals:
      */
     void databaseError(const QString& error);
 
+    void productsRead(const QList<Product*>& products);
+    void productReadByBarcode(Product* product, const QString& barcode);
+    void productSaved(bool success, int productId);
+    void productDeleted(bool success, int productId);
+
+private slots:
+    void handleProductsRead();
+    void handleProductSaved();
+
 private:
+    void handleProductReadByBarcode(Product* product, const QString& barcode);
+    void handleProductDeleted(bool success, int productId);
     /**
      * @brief 私有构造函数（单例模式）
      * @param parent 父对象指针
