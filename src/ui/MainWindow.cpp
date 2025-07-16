@@ -217,7 +217,7 @@ void MainWindow::setupStyleSheet()
         "QComboBox::drop-down { border: none; }"
         "QComboBox QAbstractItemView { border: 1px solid #dcdcdc; background-color: white; color: #333; selection-background-color: #007bff; selection-color: white; }"
         "QTableView { gridline-color: #e0e0e0; alternate-background-color: #f9f9f9; }"
-        "QTableView::corner-button {background-color: white;border: none;} "
+        "QTableView QTableCornerButton::section{background: #dee2e6;background - color: white; border: 1px solid #dee2e6;border - image: none;}"
         "QHeaderView::section { background-color: #f8f9fa; padding: 6px; border: 1px solid #dee2e6; font-weight: bold; }"
         "QHeaderView { background-color: #f8f9fa; }"
 
