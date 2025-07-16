@@ -5,6 +5,19 @@ project(SmartPOS LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# ===================================================================
+# vvvvvvvvvvvvvvvvvv 关键修复：将编码设置提前 vvvvvvvvvvvvvvvvvv
+# ===================================================================
+# 在声明任何目标或获取子项目之前，全局设置编译器选项。
+# 这可以确保所有后续的目标（包括通过FetchContent获取的）都能继承这个设置。
+if(MSVC)
+    # /utf-8 强制编译器以 UTF-8 格式读取源文件
+    add_compile_options(/utf-8)
+endif()
+# ===================================================================
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# ===================================================================
+
 # Find required Qt components
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Sql Concurrent Network PrintSupport Multimedia)
 
@@ -132,10 +145,16 @@ target_include_directories(SmartPOS PRIVATE
 
 # Compiler-specific options
 if(MSVC)
+    # /utf-8 选项已在文件顶部全局设置
+    # 这里只为我们自己的目标设置警告等级
+    target_compile_options(SmartPOSCore PRIVATE /W4)
     target_compile_options(SmartPOS PRIVATE /W4)
 else()
+    # 为其他编译器（如 GCC/Clang）设置警告选项
+    target_compile_options(SmartPOSCore PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_options(SmartPOS PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
 
 # Installation
 install(TARGETS SmartPOS
