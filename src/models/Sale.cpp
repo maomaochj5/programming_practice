@@ -16,6 +16,25 @@ Sale::Sale(QObject *parent)
     qDebug() << "Sale 构造, m_items.size:" << m_items.size();
 }
 
+Sale::Sale(const Sale& other)
+    : QObject(nullptr) // A copied sale shouldn't have a parent initially.
+    , m_transactionId(other.m_transactionId)
+    , m_customer(other.m_customer) // Shallow copy of customer is acceptable here.
+    , m_totalAmount(other.m_totalAmount)
+    , m_discountAmount(other.m_discountAmount)
+    , m_paymentMethod(other.m_paymentMethod)
+    , m_status(other.m_status)
+    , m_timestamp(other.m_timestamp)
+    , m_cashierName(other.m_cashierName)
+{
+    // Deep copy of the sale items
+    for (SaleItem* item : other.m_items) {
+        SaleItem* newItem = new SaleItem(*item);
+        newItem->setParent(this); // The new Sale owns the new SaleItem
+        m_items.append(newItem);
+    }
+}
+
 Sale::~Sale()
 {
     qDebug() << "Sale 析构, this:" << this;
@@ -70,6 +89,14 @@ void Sale::setStatus(TransactionStatus status)
     }
 }
 
+void Sale::setTimestamp(const QDateTime& timestamp)
+{
+    if (m_timestamp != timestamp) {
+        m_timestamp = timestamp;
+        emit saleChanged();
+    }
+}
+
 void Sale::setCashierName(const QString& cashierName)
 {
     if (m_cashierName != cashierName) {
@@ -84,6 +111,27 @@ void Sale::setDiscountAmount(double discount)
         m_discountAmount = discount;
         calculateTotal(); // Recalculate and emit signals
     }
+}
+
+void Sale::addItem(SaleItem* item)
+{
+    if (!item || !item->isValid()) {
+        qWarning() << "Attempt to add invalid SaleItem.";
+        if (item) item->deleteLater(); // Clean up invalid item
+        return;
+    }
+
+    // Ensure the item has the correct parent
+    if (item->parent() != this) {
+        item->setParent(this);
+    }
+
+    m_items.append(item);
+    
+    connect(item, &SaleItem::itemChanged, this, &Sale::calculateTotal);
+
+    emit itemAdded(item);
+    calculateTotal();
 }
 
 void Sale::addItem(Product* product, int quantity, double unitPrice)

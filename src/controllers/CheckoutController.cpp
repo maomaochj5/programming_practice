@@ -289,6 +289,7 @@ bool CheckoutController::completeSale()
         // 注意：这里不返回false，因为交易已经成功保存
     }
     emit saleCompleted(transactionId);
+    emit saleSuccessfullyCompleted(m_currentSale); // 发射带有完整销售信息的信号
     logOperation(QString("完成销售，交易ID：%1").arg(transactionId));
     // 重置状态
     m_paymentProcessed = false;

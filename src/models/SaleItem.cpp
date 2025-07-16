@@ -10,6 +10,18 @@ SaleItem::SaleItem(QObject *parent)
 {
 }
 
+SaleItem::SaleItem(const SaleItem& other)
+    : QObject(other.parent())
+    , m_product(new Product(*other.m_product))
+    , m_quantity(other.m_quantity)
+    , m_unitPrice(other.m_unitPrice)
+    , m_subtotal(other.m_subtotal)
+{
+    // The new product needs a parent to be memory-managed correctly.
+    // Setting `this` as the parent.
+    m_product->setParent(this);
+}
+
 SaleItem::SaleItem(Product* product, int quantity, double unitPrice, QObject *parent)
     : QObject(parent)
     , m_product(product)

@@ -430,6 +430,76 @@ void DatabaseManager::handleProductDeleted(bool success, int productId)
     emit productDeleted(success, productId);
 }
 
+QFuture<QList<Sale*>> DatabaseManager::getAllTransactions()
+{
+    return QtConcurrent::run([this]() {
+        QMutexLocker locker(&s_mutex);
+        if (!m_connected) return QList<Sale*>();
+
+        QList<Sale*> sales;
+        QSqlQuery saleQuery(m_db);
+        saleQuery.prepare(R"(
+            SELECT transaction_id, customer_id, timestamp, total_amount, discount_amount, payment_method, cashier_name 
+            FROM Transactions ORDER BY timestamp DESC
+        )");
+
+        if (!saleQuery.exec()) {
+            logError("getAllTransactions_sales", saleQuery.lastError());
+            return sales;
+        }
+
+        while (saleQuery.next()) {
+            auto sale = new Sale();
+            sale->setTransactionId(saleQuery.value("transaction_id").toInt());
+            // 客户ID暂时不处理
+            sale->setTimestamp(saleQuery.value("timestamp").toDateTime());
+            sale->setDiscountAmount(saleQuery.value("discount_amount").toDouble());
+            sale->setPaymentMethod(Sale::stringToPaymentMethod(saleQuery.value("payment_method").toString()));
+            sale->setCashierName(saleQuery.value("cashier_name").toString());
+
+            QSqlQuery itemQuery(m_db);
+            itemQuery.prepare(R"(
+                SELECT ti.transaction_item_id, ti.quantity, ti.unit_price, ti.subtotal,
+                       p.product_id, p.barcode, p.name, p.description, p.category, p.image_path
+                FROM TransactionItems ti
+                JOIN Products p ON ti.product_id = p.product_id
+                WHERE ti.transaction_id = ?
+            )");
+            itemQuery.addBindValue(sale->getTransactionId());
+
+            if (!itemQuery.exec()) {
+                logError("getAllTransactions_items", itemQuery.lastError());
+                delete sale; // 清理
+                continue;
+            }
+            
+            while (itemQuery.next()) {
+                auto product = new Product();
+                product->setProductId(itemQuery.value("product_id").toInt());
+                product->setBarcode(itemQuery.value("barcode").toString());
+                product->setName(itemQuery.value("name").toString());
+                product->setDescription(itemQuery.value("description").toString());
+                product->setPrice(itemQuery.value("unit_price").toDouble());
+                product->setCategory(itemQuery.value("category").toString());
+                product->setImagePath(itemQuery.value("image_path").toString());
+
+                int quantity = itemQuery.value("quantity").toInt();
+
+                auto saleItem = new SaleItem(product, quantity, product->getPrice(), sale);
+                product->setParent(saleItem); // Product is owned by SaleItem
+
+                sale->addItem(saleItem);
+            }
+            // Totals are calculated inside addItem, but we might need a final calculation
+            // to be safe, though it's redundant if addItem is always called.
+            sale->calculateTotal();
+            sales.append(sale);
+        }
+
+        return sales;
+    });
+}
+
 // Synchronous methods for contexts that require it (e.g., exiting)
 // These are not yet implemented as they are not currently required by the async flow.
 std::unique_ptr<Product> DatabaseManager::getProduct(int productId) { return nullptr; }

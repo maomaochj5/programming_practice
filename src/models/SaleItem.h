@@ -20,6 +20,8 @@ public:
      */
     explicit SaleItem(QObject *parent = nullptr);
     
+    SaleItem(const SaleItem& other);
+
     /**
      * @brief 参数化构造函数
      * @param product 商品指针

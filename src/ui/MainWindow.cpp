@@ -10,6 +10,8 @@
 #include "ProductDialog.h"
 #include "PaymentDialog.h"
 #include "ProductManagementDialog.h"
+#include "SalesReportDialog.h"
+#include "../utils/ReceiptPrinter.h"
 #include "ui/CartDelegate.h"
 #include "ui/RecommendationItemWidget.h"
 
@@ -81,11 +83,10 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     qDebug() << "MainWindow 析构函数开始";
-    // No need to delete child objects, Qt handles it.
-    // delete m_checkoutController;
-    // delete m_productManager;
-    // delete m_aiRecommender;
-    // delete m_barcodeScanner;
+    // Clean up the saved last sale to prevent memory leaks
+    if (m_lastCompletedSale) {
+        delete m_lastCompletedSale;
+    }
     qDebug() << "MainWindow 析构函数结束";
 }
 
@@ -171,6 +172,7 @@ void MainWindow::connectSignals()
     // This is a robust connection. When a sale is structurally changed (item added/removed),
     // CheckoutController will emit saleUpdated(), which triggers a full refresh.
     connect(m_checkoutController.get(), &CheckoutController::saleUpdated, this, &MainWindow::updateCartDisplay);
+    connect(m_checkoutController.get(), &CheckoutController::saleSuccessfullyCompleted, this, &MainWindow::onSaleCompleted);
     
     // Delegate and model signals
     connect(m_cartDelegate, &CartDelegate::removeItem, this, &MainWindow::onRemoveItemFromCart);
@@ -215,7 +217,9 @@ void MainWindow::setupStyleSheet()
         "QComboBox::drop-down { border: none; }"
         "QComboBox QAbstractItemView { border: 1px solid #dcdcdc; background-color: white; color: #333; selection-background-color: #007bff; selection-color: white; }"
         "QTableView { gridline-color: #e0e0e0; alternate-background-color: #f9f9f9; }"
+        "QTableView::corner-button {background-color: white;border: none;} "
         "QHeaderView::section { background-color: #f8f9fa; padding: 6px; border: 1px solid #dee2e6; font-weight: bold; }"
+        "QHeaderView { background-color: #f8f9fa; }"
 
         "/* ---- Menus & Toolbars ---- */"
         "QToolBar { background-color: #343a40; border-bottom: 1px solid #212529; padding: 2px; }"
@@ -398,13 +402,16 @@ void MainWindow::onApplyDiscount()
 
 void MainWindow::onPrintReceipt()
 {
-    if (!m_currentSale || m_currentSale->isEmpty()) {
-        showErrorMessage("没有销售记录可打印");
-        return;
+    if (m_lastCompletedSale) {
+        ReceiptPrinter printer;
+        if(printer.printReceipt(*m_lastCompletedSale, m_lastCompletedSale->getItems())) {
+            showSuccessMessage("小票已打印");
+        } else {
+            showErrorMessage("打印小票失败");
+        }
+    } else {
+        showErrorMessage("没有可以打印的上一笔交易");
     }
-    
-    // 打印小票逻辑
-    showSuccessMessage("打印小票功能");
 }
 
 void MainWindow::onRefreshRecommendations()
@@ -453,7 +460,9 @@ void MainWindow::onProcessPayment()
     if (dialog.exec() == QDialog::Accepted) {
         if (m_checkoutController->completeSale()) {
             showSuccessMessage("支付成功，交易完成！");
-            onNewSale(); // Start a new sale automatically
+            // Defer starting a new sale to avoid use-after-free issues
+            // with objects tied to the dialog that just closed.
+            QTimer::singleShot(0, this, &MainWindow::onNewSale);
         } else {
             showErrorMessage("完成销售失败，请检查日志");
         }
@@ -691,7 +700,9 @@ void MainWindow::updateRecommendationDisplay(const QList<int>& productIds)
 
 void MainWindow::onShowStatistics()
 {
-    QMessageBox::information(this, "销售统计", "此功能正在开发中。");
+    auto* dialog = new SalesReportDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->exec();
 }
 
 void MainWindow::onShowSettings()
@@ -701,6 +712,22 @@ void MainWindow::onShowSettings()
 
 void MainWindow::onAbout() {
     QMessageBox::about(this, "关于", "智能超市收银系统 v1.0\n基于C++/Qt开发\n集成条码识别和AI推荐功能");
+}
+
+void MainWindow::onSaleCompleted(Sale* sale)
+{
+    if (!sale) return;
+
+    // Delete the previous last completed sale if it exists
+    if (m_lastCompletedSale) {
+        delete m_lastCompletedSale;
+        m_lastCompletedSale = nullptr;
+    }
+
+    // Create a deep copy of the completed sale.
+    // This requires Sale to have a proper copy constructor.
+    m_lastCompletedSale = new Sale(*sale);
+    qDebug() << "Last completed sale has been stored. Transaction ID:" << m_lastCompletedSale->getTransactionId();
 }
 
 void MainWindow::updateTime()

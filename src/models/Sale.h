@@ -46,6 +46,12 @@ public:
      * @param parent 父对象指针
      */
     explicit Sale(QObject* parent = nullptr);
+
+    /**
+     * @brief 拷贝构造函数
+     * @param other
+     */
+    Sale(const Sale& other);
     
     /**
      * @brief 析构函数
@@ -77,8 +83,15 @@ public:
     void setCustomer(Customer* customer);
     void setPaymentMethod(PaymentMethod method);
     void setStatus(TransactionStatus status);
+    void setTimestamp(const QDateTime& timestamp);
     void setCashierName(const QString& cashierName);
     void setDiscountAmount(double discount);
+    
+    /**
+     * @brief 添加销售项目
+     * @param item 销售项目指针
+     */
+    void addItem(SaleItem* item);
     
     /**
      * @brief 添加销售项目

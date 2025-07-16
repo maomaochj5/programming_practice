@@ -30,6 +30,7 @@ set(CORE_SOURCES
     src/ui/CartDelegate.cpp
     src/ui/RecommendationItemWidget.cpp
     src/ui/ProductManagementDialog.cpp
+    src/ui/SalesReportDialog.cpp
     src/database/DatabaseManager.cpp
     src/barcode/BarcodeScanner.cpp
     src/ai/AIRecommender.cpp
@@ -52,15 +53,24 @@ set(HEADERS
     src/controllers/ProductManager.h
     src/controllers/CheckoutController.h
     src/ui/MainWindow.h
-    src/ui/ProductDialog.h
     src/ui/PaymentDialog.h
-    src/ui/CartDelegate.h
-    src/ui/RecommendationItemWidget.h
+    src/ui/ProductDialog.h
     src/ui/ProductManagementDialog.h
+    src/ui/RecommendationItemWidget.h
+    src/ui/SalesReportDialog.h
     src/database/DatabaseManager.h
     src/barcode/BarcodeScanner.h
     src/ai/AIRecommender.h
     src/utils/ReceiptPrinter.h
+)
+
+# UI files
+set(FORMS
+    src/ui/MainWindow.ui
+    src/ui/PaymentDialog.ui
+    src/ui/ProductDialog.ui
+    src/ui/ProductManagementDialog.ui
+    src/ui/SalesReportDialog.ui
 )
 
 # Resource files

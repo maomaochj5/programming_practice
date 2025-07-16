@@ -112,6 +112,7 @@ private slots:
     void onShowSettings();
     void onAbout();
     void updateTime();
+    void onSaleCompleted(Sale* sale);
 
 private:
     /**
@@ -181,6 +182,9 @@ private:
     
     // UI文件中的组件引用（通过UI文件自动生成）
     QStandardItemModel* m_productModel;
+
+    // 状态保存
+    Sale* m_lastCompletedSale = nullptr;
 
     // 退出标志
     bool m_isClosing = false;

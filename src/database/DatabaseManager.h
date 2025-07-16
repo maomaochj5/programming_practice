@@ -155,6 +155,12 @@ public:
     QList<std::unique_ptr<Sale>> getTransactionsByDateRange(const QDateTime& startDate, 
                                                            const QDateTime& endDate);
 
+    /**
+     * @brief 获取所有交易记录
+     * @return 包含所有交易记录的Future对象
+     */
+    QFuture<QList<Sale*>> getAllTransactions();
+
     // 报表和统计相关
     /**
      * @brief 获取商品销售统计
@@ -195,7 +201,7 @@ signals:
     void productReadByBarcode(Product* product, const QString& barcode);
     void productSaved(bool success, int productId);
     void productDeleted(bool success, int productId);
-
+    
 private slots:
     void handleProductsRead();
     void handleProductSaved();

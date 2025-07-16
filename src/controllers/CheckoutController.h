@@ -162,6 +162,12 @@ signals:
     void saleCompleted(int transactionId);
 
     /**
+     * @brief 销售成功完成后，将完整的销售信息发出
+     * @param completedSale 刚刚完成的销售对象的副本
+    */
+    void saleSuccessfullyCompleted(Sale* completedSale);
+
+    /**
      * @brief 销售被取消时发射的信号
      */
     void saleCancelled();
