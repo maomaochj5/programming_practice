@@ -1,36 +1,24 @@
-# 智能超市收银系统 (Smart Supermarket POS System)
+# 智能超市收银系统 (Smart POS System)
 
-一个基于C++/Qt的现代化智能超市收银系统，集成条形码识别、AI推荐、商品管理等功能。
+一个基于C++/Qt的现代化、高响应度的智能超市收银系统。本项目从一个不稳定的原型出发，经过了深度重构和调试，现已成为一个功能稳定、性能可靠的应用程序。
 
 ## 🚀 项目特性
 
-- **现代化UI界面**: 基于Qt Widgets的直观用户界面
-- **智能条码识别**: 支持摄像头实时扫描和手动输入
-- **AI智能推荐**: 基于购物车内容的商品推荐算法
-- **完整的商品管理**: 增删改查、库存管理、双击添加功能
-- **销售流程管理**: 完整的收银、支付、打印流程
-- **数据持久化**: SQLite数据库存储
-- **模块化架构**: 清晰的MVC架构设计
-- **自动化测试**: 完整的单元测试和集成测试
+- **响应式现代化UI**: 基于Qt Widgets，通过集中的样式表管理，提供统一、清晰、高对比度的用户界面。
+- **异步数据库操作**: 所有数据库查询均在后台线程中运行 (`QtConcurrent`)，确保UI在数据加载期间绝不冻结。
+- **交互式购物车**: 使用自定义委托 (`QStyledItemDelegate`) 实现，支持在表格内直接修改商品数量和移除商品。
+- **统一的商品搜索**: 智能识别输入是商品名称还是条形码，简化操作流程。
+- **独立的商品管理**: 将商品增、删、改功能封装在独立的对话框中，让主界面专注于销售任务。
+- **AI智能推荐**: 基于当前购物车内容，以水平滚动轮播的形式，图文并茂地为用户推荐商品。
+- **健壮的错误处理与信号/槽机制**: 确保了应用的稳定性和模块间的可靠通信。
+- **完整的销售流程**: 支持收银、多种支付方式模拟、折扣应用和票据打印。
 
 ## 📋 系统要求
 
-### 开发环境
 - **操作系统**: Windows 10+, macOS 10.14+, Ubuntu 18.04+
-- **编译器**: 
-  - GCC 8.0+ 或 Clang 8.0+ (Linux/macOS)
-  - MSVC 2019+ (Windows)
 - **Qt版本**: Qt 6.2+
 - **CMake**: 3.16+
 - **C++标准**: C++17
-
-### 依赖库
-- Qt6 Core
-- Qt6 Widgets  
-- Qt6 Sql
-- Qt6 Network
-- Qt6 PrintSupport
-- Qt6 Test (测试模块)
 
 ## 🛠️ 快速开始
 
@@ -41,213 +29,57 @@ git clone https://github.com/your-username/smart-pos-system.git
 cd smart-pos-system
 ```
 
-### 2. 一键编译 (推荐)
+### 2. 编译
 
 ```bash
-# Linux/macOS
-./scripts/build.sh
-
-# Windows
-scripts\build.bat
-```
-
-### 3. 手动编译
-
-```bash
-# 创建构建目录
+# 创建并进入构建目录
 mkdir build && cd build
 
 # 配置项目
 cmake ..
 
-# 编译 (使用多核编译加速)
-make -j4                # Linux/macOS
-# 或者
-cmake --build . -j 4    # 跨平台方式
+# 编译 (建议使用多核加速)
+make -j8
 ```
 
-### 4. 运行应用
+### 3. 运行
 
 ```bash
-# 运行主程序
+# 在 build 目录下运行
 ./SmartPOS
-
-# 运行测试
-make test
-# 或者单独运行测试
-./tests/TestProduct
-./tests/TestGUIBasic
 ```
 
 ## 📁 项目结构
 
 ```
-SmartPOS/
-├── 📁 src/                         # 源代码
-│   ├── main.cpp                    # 程序入口点
-│   ├── 📁 ui/                      # 用户界面层
-│   │   ├── MainWindow.cpp/h/ui     # 主窗口
-│   │   ├── ProductDialog.cpp/h     # 商品对话框
-│   │   └── PaymentDialog.cpp/h     # 支付对话框
-│   ├── 📁 models/                  # 数据模型层
-│   │   ├── Product.cpp/h           # 商品模型
-│   │   ├── Customer.cpp/h          # 客户模型  
-│   │   ├── Sale.cpp/h              # 销售模型
-│   │   └── SaleItem.cpp/h          # 销售项目模型
-│   ├── 📁 controllers/             # 控制器层
-│   │   ├── ProductManager.cpp/h    # 商品管理控制器
-│   │   └── CheckoutController.cpp/h # 收银流程控制器
-│   ├── 📁 database/                # 数据持久层
-│   │   └── DatabaseManager.cpp/h  # 数据库管理器
-│   ├── 📁 ai/                      # AI推荐系统
-│   │   └── AIRecommender.cpp/h     # 智能推荐引擎
-│   ├── 📁 barcode/                 # 条码识别
-│   │   └── BarcodeScanner.cpp/h    # 条码扫描器
-│   └── 📁 utils/                   # 工具类
-│       └── ReceiptPrinter.cpp/h    # 票据打印
-├── 📁 tests/                       # 测试代码
-│   ├── 📁 unit/                    # 单元测试
-│   └── 📁 integration/             # 集成测试
-├── 📁 resources/                   # 资源文件
-│   ├── icons.qrc                   # Qt资源文件
-│   └── *.png                       # 图标文件
-├── 📁 scripts/                     # 自动化脚本
-│   ├── build.sh                    # Linux/macOS构建脚本
-│   ├── build.bat                   # Windows构建脚本
-│   └── setup-dev.sh                # 开发环境配置
-├── 📁 .github/workflows/           # CI/CD配置
-│   └── ci-cd.yml                   # GitHub Actions
+smart-pos-system/
+├── .github/          # GitHub Actions CI/CD 配置
+├── build/            # 编译产物目录 (自动生成)
+├── resources/        # 应用资源 (图标, 声音等)
+├── src/              # 源代码
+│   ├── ai/
+│   ├── barcode/
+│   ├── controllers/
+│   ├── database/
+│   ├── models/
+│   └── ui/
+├── tests/            # 测试代码 (单元测试/集成测试)
+├── .gitignore
+├── CMakeLists.txt    # 项目主构建文件
+├── CONTRIBUTING.md   # 贡献指南
+├── LICENSE           # MIT 许可证
+└── README.md         # 项目说明文档
 ```
 
-## 🏗️ 技术架构
-│   │   └── TestDatabaseManager.cpp # 数据库测试
-│   └── 📁 integration/             # 集成测试
-│       ├── TestSmartPOSWorkflow.cpp # 完整工作流测试
-│       ├── TestGUIBasic.cpp        # GUI基础测试
-│       ├── TestGUIAutomation.cpp   # GUI自动化测试
-│       └── TestGUIInterface.cpp    # GUI接口测试
-├── 📁 resources/                   # 资源文件
-│   ├── icons.qrc                   # Qt资源配置
-│   └── 📁 icons/                   # 应用图标资源
-├── 📁 scripts/                     # 自动化脚本
-│   ├── build.sh/.bat               # 跨平台构建脚本
-│   ├── setup-dev.sh                # 开发环境设置
-│   └── init-git.sh                 # Git仓库初始化
-├── 📁 .github/                     # GitHub配置
-│   └── workflows/ci-cd.yml         # CI/CD自动化流水线
-├── CMakeLists.txt                  # CMake主配置
-├── README.md                       # 项目说明
-├── BUILD.md                        # 编译指南
-├── CONTRIBUTING.md                 # 贡献指南
-├── CHANGELOG.md                    # 更新日志
-├── TEST_REPORT.md                  # 测试报告
-├── LICENSE                         # MIT许可证
-└── .gitignore                      # Git忽略配置
-```
-├── resources/             # 资源文件
-├── tests/                # 测试文件
-├── docs/                 # 文档
-├── CMakeLists.txt        # CMake构建配置
-└── README.md
-```
+## 🏗️ 核心技术与架构演进
 
-## 快速开始
+本项目经历了一次从同步到异步的重大架构重构，以解决UI冻结问题。
 
-### 环境要求
-- Qt 6.0 或更高版本
-- CMake 3.16 或更高版本
-- C++17 兼容编译器
-- SQLite 3
-- 支持的摄像头设备
-
-### 构建步骤
-```bash
-mkdir build
-cd build
-cmake ..
-make
-```
-
-### 运行系统
-```bash
-./SmartPOS
-```
-
-## 核心模块说明
-
-### 1. 商品管理 (ProductManager)
-- 商品信息的增删改查
-- 条码管理和验证
-- 库存自动更新
-
-### 2. 销售控制器 (CheckoutController)
-- 管理销售流程
-- 处理支付逻辑
-- 集成条形码扫描
-
-### 3. 数据库管理 (DatabaseManager)
-- 单例模式设计
-- 事务安全保证
-- 数据持久化
-
-### 4. 条形码识别 (BarcodeScanner)
-- QZXing集成
-- 实时视频处理
-- 性能优化
-
-### 5. AI推荐系统 (AIRecommender)
-- 协同过滤算法
-- 冷启动问题处理
-- 实时推荐生成
-
-## 数据库设计
-
-### 主要表结构
-- **Products**: 商品信息
-- **Customers**: 客户信息
-- **Transactions**: 交易记录
-- **TransactionItems**: 交易明细
-
-## 开发指南
-
-### 编码规范
-- 遵循C++核心指导原则
-- 使用Qt的信号与槽机制
-- 实现RAII内存管理
-- 保持代码模块化
-
-### 测试策略
-- 单元测试覆盖核心逻辑
-- 集成测试验证模块交互
-- 性能测试保证响应速度
-
-## 部署说明
-
-### 硬件要求
-- 最小2GB RAM
-- 支持Qt的操作系统
-- USB摄像头（用于条形码识别）
-- 票据打印机（可选）
-
-### 软件依赖
-- Qt运行时库
-- SQLite数据库
-- 相关硬件驱动
-
-## 贡献指南
-
-欢迎提交Bug报告和功能请求。请遵循项目的编码规范和提交流程。
+- **模型层 (`models`)**: 包括 `Product`, `Sale` 等，负责原始数据结构和业务逻辑。`Sale` 类通过信号 (`totalChanged`, `saleChanged`) 驱动UI更新。
+- **数据库层 (`database`)**: `DatabaseManager` 使用 `QtConcurrent::run` 将所有SQL查询移至工作线程，并通过信号 (`productsRead`, `productSaved` 等) 将结果返回给主线程。
+- **控制器层 (`controllers`)**: `ProductManager` 和 `CheckoutController` 作为模型和UI之间的桥梁。它们监听来自数据库层的信号，处理数据，并发出自己的信号 (`allProductsChanged`, `saleUpdated`) 来通知UI层。
+- **视图层 (`ui`)**: `MainWindow` 和其他对话框完全通过信号和槽与控制器层交互。所有UI更新都是由信号驱动的，实现了高度解耦和响应式设计。
 
 ## 许可证
 
-本项目采用MIT许可证。详见LICENSE文件。
-
-## 联系方式
-
-如有问题或建议，请通过以下方式联系：
-- 项目Issues页面
-- 开发团队邮箱
-
----
-
-**注意**: 这是一个教学实训项目，展示了现代C++/Qt开发的最佳实践和创新技术的集成应用。
+本项目采用MIT许可证。详见 `LICENSE` 文件。
