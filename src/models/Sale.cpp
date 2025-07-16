@@ -19,14 +19,10 @@ Sale::Sale(QObject *parent)
 Sale::~Sale()
 {
     qDebug() << "Sale 析构, this:" << this;
-    qDebug() << "Sale 析构, m_items.size:" << m_items.size();
-    for (SaleItem* item : m_items) {
-        qDebug() << "Sale 析构, item ptr:" << item;
-        if (item) {
-            // 直接删除，不使用deleteLater()，避免在析构时出现问题
-            delete item;
-        }
-    }
+    // No need to manually delete child QObjects. Qt's parent-child
+    // memory management system will handle the deletion of m_items
+    // automatically since they were created with this Sale object as their parent.
+    // qDeleteAll(m_items); // This would cause a double-free.
     m_items.clear();
 }
 

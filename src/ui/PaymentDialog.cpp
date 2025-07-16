@@ -7,12 +7,15 @@
 #include <QIcon>
 #include <QMessageBox>
 
-PaymentDialog::PaymentDialog(double totalAmount, QWidget *parent)
+#include "../controllers/CheckoutController.h"
+
+PaymentDialog::PaymentDialog(double totalAmount, CheckoutController* checkoutController, QWidget *parent)
     : QDialog(parent)
     , m_totalAmount(totalAmount)
     , m_changeAmount(0.0)
     , m_result(Cancelled)
     , m_selectedMethod(Cash)
+    , m_checkoutController(checkoutController) // Initialize controller
     , m_paymentTimer(new QTimer(this))
     , m_successSound(new QSoundEffect(this))
     , m_errorSound(new QSoundEffect(this))
@@ -203,32 +206,34 @@ void PaymentDialog::updatePaymentDisplay()
 
 void PaymentDialog::processPayment()
 {
-    PaymentMethod method = getPaymentMethod();
-    
-    showPaymentProcessing();
-    
-    switch (method) {
-    case Cash:
-        // 现金支付立即完成
+    if (!m_checkoutController) {
+        QMessageBox::critical(this, "严重错误", "收银控制器未初始化！");
+        return;
+    }
+
+    QString methodStr;
+    switch (m_selectedMethod) {
+        case Cash: methodStr = "Cash"; break;
+        case Card: methodStr = "Card"; break;
+        case Mobile: methodStr = "Mobile"; break;
+        default: methodStr = "Unknown";
+    }
+
+    double paidAmount = (m_selectedMethod == Cash) ? getCashAmount() : m_totalAmount;
+
+    // Delegate payment processing to the controller
+    bool success = m_checkoutController->processPayment(methodStr, m_totalAmount, paidAmount);
+
+    if (success) {
         m_result = Success;
         playSuccessSound();
-        QTimer::singleShot(1000, this, &QDialog::accept);
-        break;
-        
-    case Card:
-        simulateCardPayment();
-        break;
-        
-    case Mobile:
-        simulateMobilePayment();
-        break;
-    case Mixed:
-        // This case is no longer used
+        accept(); // Close dialog on success
+    } else {
         m_result = Failed;
         playErrorSound();
-        hidePaymentProcessing();
-        QMessageBox::warning(this, tr("错误"), tr("不支持的支付方式"));
-        break;
+        // The controller should have emitted an error signal with a message.
+        // We can optionally show a generic message here too.
+        QMessageBox::warning(this, "支付失败", "支付处理失败，请检查金额或联系管理员。");
     }
 }
 

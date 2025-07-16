@@ -19,6 +19,7 @@
 
 // 前向声明
 class QSoundEffect;
+class CheckoutController; // Forward declaration
 
 class PaymentDialog : public QDialog
 {
@@ -39,7 +40,13 @@ public:
         Timeout
     };
 
-    explicit PaymentDialog(double totalAmount, QWidget *parent = nullptr);
+    /**
+     * @brief 构造函数
+     * @param totalAmount 总金额
+     * @param checkoutController 收银控制器
+     * @param parent 父窗口指针
+     */
+    PaymentDialog(double totalAmount, CheckoutController* checkoutController, QWidget *parent = nullptr);
 
     PaymentMethod getPaymentMethod() const;
     double getCashAmount() const;
@@ -92,6 +99,7 @@ private:
     double m_changeAmount;
     PaymentResult m_result;
     PaymentMethod m_selectedMethod;
+    CheckoutController* m_checkoutController; // Add controller member
     
     QTimer *m_paymentTimer;
     QSoundEffect *m_successSound;

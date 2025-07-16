@@ -443,20 +443,22 @@ void MainWindow::onRecommendationSelected()
 
 void MainWindow::onProcessPayment()
 {
+    qDebug() << "onProcessPayment triggered";
     if (!m_currentSale || m_currentSale->isEmpty()) {
-        showErrorMessage("购物车为空，无法进行支付");
+        showErrorMessage("购物车为空，无法结算");
         return;
     }
-    
-    PaymentDialog dialog(m_currentSale->getTotalAmount(), this);
+
+    PaymentDialog dialog(m_currentSale->getFinalAmount(), m_checkoutController.get(), this);
     if (dialog.exec() == QDialog::Accepted) {
-        // 支付成功，保存交易
         if (m_checkoutController->completeSale()) {
-            showSuccessMessage("支付成功，交易已完成");
-            onNewSale(); // 开始新的销售
+            showSuccessMessage("支付成功，交易完成！");
+            onNewSale(); // Start a new sale automatically
         } else {
-            showErrorMessage("保存交易失败");
+            showErrorMessage("完成销售失败，请检查日志");
         }
+    } else {
+        showErrorMessage("支付已取消");
     }
 }
 
