@@ -2,6 +2,8 @@
 build/
 build-*/
 *-build/
+.vs/
+CMakeSettings.json
 
 # CMake
 CMakeCache.txt

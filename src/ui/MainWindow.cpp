@@ -217,7 +217,7 @@ void MainWindow::setupStyleSheet()
 
         "/* ---- Menus & Toolbars ---- */"
         "QMenuBar { background-color: #e9ecef; border-bottom: 1px solid #dcdcdc; }"
-        "QMenuBar::item { color: white; padding: 4px 10px; }"
+        "QMenuBar::item { color: #333; padding: 4px 10px; }"
         "QMenuBar::item:selected, QMenuBar::item:pressed { background-color: #d4dae0; color: #000; }"
         "QMenu { background-color: #ffffff; border: 1px solid #ced4da; }"
         "QMenu::item:selected { background-color: #007bff; color: white; }"
