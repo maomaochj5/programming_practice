@@ -210,17 +210,28 @@ void MainWindow::setupStyleSheet()
         "QPushButton#okButton:hover, QPushButton#processButton:hover, QPushButton#checkoutButton:hover { background-color: #218838; }"
 
         "/* ---- Inputs & Views ---- */"
-        "QLineEdit, QListWidget, QTableView, QTextEdit, QSpinBox, QDoubleSpinBox { background-color: #ffffff; color: #333; border: 1px solid #dcdcdc; border-radius: 4px; padding: 5px; }"
-        "QLineEdit:focus, QTableView:focus, QTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { border-color: #80bdff; }"
+        "QLineEdit, QComboBox, QListWidget, QTableView, QTextEdit, QSpinBox, QDoubleSpinBox { background-color: #ffffff; color: #333; border: 1px solid #dcdcdc; border-radius: 4px; padding: 5px; }"
+        "QLineEdit:focus, QComboBox:focus, QTableView:focus, QTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus { border-color: #80bdff; }"
+        "QComboBox::drop-down { border: none; }"
+        "QComboBox QAbstractItemView { border: 1px solid #dcdcdc; background-color: white; color: #333; selection-background-color: #007bff; selection-color: white; }"
         "QTableView { gridline-color: #e0e0e0; alternate-background-color: #f9f9f9; }"
         "QHeaderView::section { background-color: #f8f9fa; padding: 6px; border: 1px solid #dee2e6; font-weight: bold; }"
 
         "/* ---- Menus & Toolbars ---- */"
+        "QToolBar { background-color: #343a40; border-bottom: 1px solid #212529; padding: 2px; }"
+        "QToolButton { color: white; background-color: transparent; padding: 5px; border-radius: 4px; }"
+        "QToolButton:hover { background-color: #495057; }"
+        "QToolButton:pressed { background-color: #212529; }"
+        "QToolBar::separator { width: 1px; background-color: #495057; margin: 4px 6px; }"
         "QMenuBar { background-color: #e9ecef; border-bottom: 1px solid #dcdcdc; }"
         "QMenuBar::item { color: #333; padding: 4px 10px; }"
         "QMenuBar::item:selected, QMenuBar::item:pressed { background-color: #d4dae0; color: #000; }"
         "QMenu { background-color: #ffffff; border: 1px solid #ced4da; }"
         "QMenu::item:selected { background-color: #007bff; color: white; }"
+
+        "/* ---- StatusBar ---- */"
+        "QStatusBar { background-color: #343a40; color: #ffffff; font-weight: bold; }"
+        "QStatusBar::item { border: none; }"
 
         "/* ---- Containers ---- */"
         "QGroupBox { background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 5px; margin-top: 10px; }"
@@ -547,7 +558,7 @@ void MainWindow::updateProductDisplay(const QList<Product*>& products)
 void MainWindow::showErrorMessage(const QString& message)
 {
     if (ui->statusbar) {
-        ui->statusbar->setStyleSheet("QStatusBar { color: red; }");
+        ui->statusbar->setStyleSheet("background-color: #dc3545; color: white; font-weight: bold;");
         ui->statusbar->showMessage(QString("错误: %1").arg(message), 5000);
     }
     
@@ -558,7 +569,7 @@ void MainWindow::showSuccessMessage(const QString& message)
 {
     qDebug() << "MainWindow::showSuccessMessage called:" << message;
     if (ui->statusbar) {
-        ui->statusbar->setStyleSheet("QStatusBar { color: green; }");
+        ui->statusbar->setStyleSheet("background-color: #28a745; color: white; font-weight: bold;");
         ui->statusbar->showMessage(message, 3000);
     }
 }
