@@ -89,8 +89,13 @@ private slots:
     void onBarcodeScanned(const QString& barcode);
     void onProductFoundByBarcode(Product* product, const QString& barcode);
     void onSearchProduct();
-    void onStartScan();
-    void onStopScan();
+    
+    // 图片扫描槽函数
+    void onSelectImage();
+    void onSelectFolder();
+    void onImageLoaded(const QPixmap& image, const QString& filePath);
+    void onScanProgressUpdated(double progress);
+    void onScanAnimationFinished();
     
     // AI推荐槽函数
     void onRecommendationSelected();
@@ -119,6 +124,12 @@ private:
      * @brief 初始化用户界面
      */
     void initializeUI();
+
+    /**
+     * @brief 更新扫描动画
+     * @param progress 扫描进度 (0.0 to 1.0)
+     */
+    void updateScanAnimation(double progress);
     
     /**
      * @brief 连接信号与槽
@@ -172,6 +183,9 @@ private:
 private:
     // UI
     std::unique_ptr<Ui::MainWindow> ui;
+
+    // 扫描动画覆盖层
+    QLabel* m_scanAnimationLabel;
 
     // 核心控制器
     std::unique_ptr<CheckoutController> m_checkoutController;

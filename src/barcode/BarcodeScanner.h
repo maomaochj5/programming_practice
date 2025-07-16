@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QTimer>
 #include <QRectF>
+#include <QPixmap>
+#include <QStringList>
 // #include <QCamera>
 // #include <QVideoWidget>
 #include <memory>
@@ -15,8 +17,7 @@ class QVideoWidget;
 /**
  * @brief BarcodeScanner类 - 条形码扫描器
  * 
- * 基于摄像头的实时条形码识别系统
- * 注意：这是一个简化版本，实际项目中需要集成QZXing库
+ * 基于图片文件的条码识别系统
  */
 class BarcodeScanner : public QObject
 {
@@ -28,9 +29,8 @@ public:
      */
     enum ScannerStatus {
         Stopped = 0,        ///< 已停止
-        Starting,           ///< 启动中
-        Running,            ///< 运行中
-        Error               ///< 错误状态
+        LoadingImage,       ///< 正在加载图片
+        ScanningImage       ///< 正在扫描图片
     };
     Q_ENUM(ScannerStatus)
 
@@ -46,64 +46,48 @@ public:
     ~BarcodeScanner();
 
     /**
-     * @brief 启动扫描器
-     * @return 如果启动成功返回true
-     */
-    bool startScanning();
-
-    /**
-     * @brief 停止扫描器
-     */
-    void stopScanning();
-
-    /**
      * @brief 获取当前状态
      * @return 当前扫描器状态
      */
     ScannerStatus getStatus() const { return m_status; }
 
     /**
-     * @brief 检查扫描器是否可用
-     * @return 如果可用返回true
+     * @brief 停止所有扫描活动
      */
-    bool isAvailable() const;
+    void stopScanning();
 
     /**
-     * @brief 设置视频输出组件
-     * @param videoWidget 视频显示组件
+     * @brief 从图片文件扫描条码
+     * @param filePath 图片文件路径
+     * @return 如果成功开始扫描返回true
      */
-    void setVideoWidget(QVideoWidget* videoWidget);
+    bool scanImageFromFile(const QString& filePath);
 
     /**
-     * @brief 获取可用的摄像头列表
-     * @return 摄像头设备名称列表
+     * @brief 从文件夹选择图片进行扫描
+     * @param folderPath 文件夹路径
+     * @return 如果成功选择文件夹返回true
      */
-    QStringList getAvailableCameras() const;
+    bool scanImageFromFolder(const QString& folderPath);
 
     /**
-     * @brief 选择摄像头
-     * @param cameraIndex 摄像头索引
-     * @return 如果选择成功返回true
+     * @brief 获取当前显示的图片
+     * @return 当前图片的QPixmap
      */
-    bool selectCamera(int cameraIndex);
+    QPixmap getCurrentImage() const { return m_currentImage; }
 
     /**
-     * @brief 设置扫描区域
-     * @param rect 扫描区域矩形（相对于视频画面的比例，0.0-1.0）
+     * @brief 获取文件夹中所有图片文件
+     * @param folderPath 文件夹路径
+     * @return 图片文件路径列表
      */
-    void setScanRegion(const QRectF& rect);
+    QStringList getImageFilesFromFolder(const QString& folderPath) const;
 
     /**
-     * @brief 设置支持的条码格式
-     * @param formats 条码格式列表
+     * @brief 设置支持的图片格式
+     * @param formats 图片格式列表（如 "jpg", "png", "bmp"）
      */
-    void setSupportedFormats(const QStringList& formats);
-
-    /**
-     * @brief 模拟扫描（用于测试和演示）
-     * @param barcode 要模拟的条码
-     */
-    void simulateScan(const QString& barcode);
+    void setSupportedImageFormats(const QStringList& formats);
 
 signals:
     /**
@@ -129,31 +113,36 @@ signals:
      */
     void frameUpdated();
 
+    /**
+     * @brief 图片加载完成时发射的信号
+     * @param image 加载的图片
+     * @param filePath 图片文件路径
+     */
+    void imageLoaded(const QPixmap& image, const QString& filePath);
+
+    /**
+     * @brief 扫描动画进度更新信号
+     * @param progress 进度值（0.0-1.0）
+     */
+    void scanProgressUpdated(double progress);
+
+    /**
+     * @brief 扫描动画完成信号
+     */
+    void scanAnimationFinished();
+
 private slots:
     /**
-     * @brief 摄像头状态改变槽函数
-     * @param status 摄像头状态
+     * @brief 图片扫描定时器槽函数
      */
-    void onCameraStatusChanged(int status);
+    void onImageScanTimer();
 
     /**
-     * @brief 摄像头错误槽函数
-     * @param error 错误类型
+     * @brief 扫描动画定时器槽函数
      */
-    void onCameraError(int error);
-
-    /**
-     * @brief 模拟扫描定时器槽函数（用于演示）
-     */
-    void onSimulationTimer();
+    void onScanAnimationTimer();
 
 private:
-    /**
-     * @brief 初始化摄像头
-     * @return 如果初始化成功返回true
-     */
-    bool initializeCamera();
-
     /**
      * @brief 设置扫描器状态
      * @param status 新状态
@@ -161,36 +150,27 @@ private:
     void setStatus(ScannerStatus status);
 
     /**
-     * @brief 处理帧数据（在实际实现中会进行条码解码）
-     * @param frameData 帧数据
+     * @brief 从图片中解码条码
+     * @param image 要扫描的图片
+     * @return 解码到的条码字符串，如果没有找到返回空字符串
      */
-    void processFrame(const QByteArray& frameData);
+    QString decodeImageBarcode(const QImage& image);
 
-    /**
-     * @brief 验证条码格式
-     * @param barcode 条码字符串
-     * @return 如果格式有效返回true
-     */
-    bool validateBarcodeFormat(const QString& barcode) const;
+    // 状态
+    ScannerStatus m_status;
+    
+    // 图片处理
+    QPixmap m_currentImage;
+    QStringList m_currentFolderImages;
+    int m_currentImageIndex;
+    QStringList m_supportedImageFormats;
 
-private:
-    QCamera* m_camera;                      ///< 摄像头对象
-    QVideoWidget* m_videoWidget;            ///< 视频显示组件
-    ScannerStatus m_status;                 ///< 当前状态
-    QTimer* m_simulationTimer;              ///< 模拟扫描定时器
-    
-    // 扫描配置
-    QRectF m_scanRegion;                    ///< 扫描区域
-    QStringList m_supportedFormats;         ///< 支持的条码格式
-    int m_currentCameraIndex;               ///< 当前摄像头索引
-    
-    // 性能优化参数
-    int m_scanInterval;                     ///< 扫描间隔（毫秒）
-    bool m_enableAutoFocus;                 ///< 是否启用自动对焦
-    
-    // 演示和测试用的模拟数据
-    QStringList m_demoProducts;             ///< 演示商品条码列表
-    int m_demoIndex;                        ///< 当前演示商品索引
+    // 定时器
+    QTimer* m_imageScanTimer;
+    QTimer* m_scanAnimationTimer;
+
+    // 扫描动画
+    double m_scanProgress;
 };
 
 #endif // BARCODESCANNER_H

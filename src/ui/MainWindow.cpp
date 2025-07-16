@@ -15,6 +15,7 @@
 #include "ui/CartDelegate.h"
 #include "ui/RecommendationItemWidget.h"
 
+#include <QPainter>
 #include <QApplication>
 #include <QMenuBar>
 #include <QToolBar>
@@ -40,13 +41,16 @@
 #include <QHeaderView>
 #include <QCloseEvent>
 #include <QDebug>
+#include <QFileDialog>
+#include <QFileInfo>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(std::make_unique<Ui::MainWindow>())
+    , m_isClosing(false)
     , m_currentSale(nullptr)
     , m_currentUser("收银员")
-    , m_isClosing(false)
+    , m_scanAnimationLabel(nullptr)
 {
     qDebug() << "MainWindow 构造函数开始";
     
@@ -134,6 +138,14 @@ void MainWindow::initializeUI()
         ui->removeFromCartButton->setVisible(false);
     }
     
+    // Setup scan animation label
+    if (ui->imageDisplayLabel) {
+        m_scanAnimationLabel = new QLabel(ui->imageDisplayLabel);
+        m_scanAnimationLabel->setAttribute(Qt::WA_TranslucentBackground);
+        m_scanAnimationLabel->setScaledContents(true);
+        m_scanAnimationLabel->hide();
+    }
+    
     // Configure recommendation list
     if (ui->recommendationListWidget) {
         ui->recommendationListWidget->setFlow(QListView::LeftToRight);
@@ -163,9 +175,12 @@ void MainWindow::connectSignals()
     if (ui->reportsButton) connect(ui->reportsButton, &QPushButton::clicked, this, &MainWindow::onShowStatistics);
     if (ui->searchLineEdit) connect(ui->searchLineEdit, &QLineEdit::returnPressed, this, &MainWindow::onSearchOrScan);
     if (ui->searchButton) connect(ui->searchButton, &QPushButton::clicked, this, &MainWindow::onSearchOrScan);
-    if (ui->startScanButton) connect(ui->startScanButton, &QPushButton::clicked, this, &MainWindow::onStartScan);
-    if (ui->stopScanButton) connect(ui->stopScanButton, &QPushButton::clicked, this, &MainWindow::onStopScan);
+    if (ui->selectImageButton) connect(ui->selectImageButton, &QPushButton::clicked, this, &MainWindow::onSelectImage);
+    if (ui->selectFolderButton) connect(ui->selectFolderButton, &QPushButton::clicked, this, &MainWindow::onSelectFolder);
     connect(m_barcodeScanner.get(), &BarcodeScanner::barcodeDetected, this, &MainWindow::onBarcodeScanned);
+    connect(m_barcodeScanner.get(), &BarcodeScanner::imageLoaded, this, &MainWindow::onImageLoaded);
+    connect(m_barcodeScanner.get(), &BarcodeScanner::scanProgressUpdated, this, &MainWindow::onScanProgressUpdated);
+    connect(m_barcodeScanner.get(), &BarcodeScanner::scanAnimationFinished, this, &MainWindow::onScanAnimationFinished);
     if (ui->refreshRecommendationButton) connect(ui->refreshRecommendationButton, &QPushButton::clicked, this, &MainWindow::onRefreshRecommendations);
     if (ui->discountButton) connect(ui->discountButton, &QPushButton::clicked, this, &MainWindow::onApplyDiscount);
 
@@ -332,29 +347,6 @@ void MainWindow::onSearchOrScan()
     } else {
         onSearchProduct(); // It's a search
     }
-}
-
-void MainWindow::onStartScan()
-{
-    qDebug() << "onStartScan triggered";
-    if (m_barcodeScanner->startScanning()) {
-        ui->startScanButton->setEnabled(false);
-        ui->stopScanButton->setEnabled(true);
-        if(ui->scanStatusLabel) ui->scanStatusLabel->setText("扫描状态: 扫描中");
-        showSuccessMessage("开始扫描条码");
-    } else {
-        showErrorMessage("启动扫描器失败");
-    }
-}
-
-void MainWindow::onStopScan()
-{
-    qDebug() << "onStopScan triggered";
-    m_barcodeScanner->stopScanning();
-    ui->startScanButton->setEnabled(true);
-    ui->stopScanButton->setEnabled(false);
-    if(ui->scanStatusLabel) ui->scanStatusLabel->setText("扫描状态: 已停止");
-    showSuccessMessage("停止扫描");
 }
 
 void MainWindow::onAddToCart()
@@ -762,4 +754,105 @@ void MainWindow::closeEvent(QCloseEvent *event)
     } else {
         event->ignore();
     }
+}
+
+// 图片扫描相关槽函数
+void MainWindow::onSelectImage()
+{
+    QString filePath = QFileDialog::getOpenFileName(this, "选择条码图片", "", "图片文件 (*.png *.jpg *.bmp)");
+    if (!filePath.isEmpty()) {
+        m_barcodeScanner->scanImageFromFile(filePath);
+    }
+}
+
+void MainWindow::onSelectFolder()
+{
+    if (m_barcodeScanner->getStatus() != BarcodeScanner::Stopped) {
+        showErrorMessage("扫描器正在运行，请先停止。");
+        return;
+    }
+
+    QString folderPath = QFileDialog::getExistingDirectory(this, "选择包含条码图片的文件夹", QDir::homePath());
+    if (!folderPath.isEmpty()) {
+        m_barcodeScanner->scanImageFromFolder(folderPath);
+        ui->scanStatusLabel->setText("状态: 开始扫描文件夹...");
+    }
+}
+
+void MainWindow::onImageLoaded(const QPixmap& image, const QString& filePath)
+{
+    if (ui->imageDisplayLabel) {
+        ui->imageDisplayLabel->setPixmap(image.scaled(ui->imageDisplayLabel->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    }
+    
+    if (m_scanAnimationLabel) {
+        m_scanAnimationLabel->resize(ui->imageDisplayLabel->size());
+    }
+
+    QFileInfo fileInfo(filePath);
+    ui->scanStatusLabel->setText(tr("正在扫描: %1").arg(fileInfo.fileName()));
+}
+
+void MainWindow::onScanProgressUpdated(double progress)
+{
+    // 更新进度条
+    if (ui->scanProgressBar) {
+        ui->scanProgressBar->setValue(static_cast<int>(progress * 100));
+    }
+    
+    // 更新状态标签
+    if (ui->scanStatusLabel) {
+        ui->scanStatusLabel->setText(QString("扫描进度: %1%").arg(static_cast<int>(progress * 100)));
+    }
+    updateScanAnimation(progress);
+}
+
+void MainWindow::onScanAnimationFinished()
+{
+    // 重置进度条
+    if (ui->scanProgressBar) {
+        ui->scanProgressBar->setValue(0);
+    }
+    
+    // 更新状态标签
+    if (ui->scanStatusLabel) {
+        ui->scanStatusLabel->setText("扫描完成");
+    }
+    
+    qDebug() << "扫描动画完成";
+    if(m_scanAnimationLabel) {
+        m_scanAnimationLabel->hide();
+    }
+}
+
+void MainWindow::updateScanAnimation(double progress)
+{
+    if (!m_scanAnimationLabel || !m_scanAnimationLabel->parentWidget()) {
+        return;
+    }
+
+    m_scanAnimationLabel->resize(m_scanAnimationLabel->parentWidget()->size());
+    QPixmap pixmap(m_scanAnimationLabel->size());
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    int y = static_cast<int>(progress * m_scanAnimationLabel->height());
+    
+    // Draw the red scanning line
+    QPen pen(QColor(255, 0, 0, 200));
+    pen.setWidth(3);
+    painter.setPen(pen);
+    painter.drawLine(0, y, m_scanAnimationLabel->width(), y);
+
+    // Add a gradient effect to make it look nicer
+    QLinearGradient gradient(0, y - 10, 0, y + 10);
+    gradient.setColorAt(0.0, QColor(255, 0, 0, 0));
+    gradient.setColorAt(0.5, QColor(255, 0, 0, 220));
+    gradient.setColorAt(1.0, QColor(255, 0, 0, 0));
+    painter.setBrush(gradient);
+    painter.setPen(Qt::NoPen);
+    painter.drawRect(0, y - 10, m_scanAnimationLabel->width(), 20);
+
+    m_scanAnimationLabel->setPixmap(pixmap);
+    m_scanAnimationLabel->show();
 }

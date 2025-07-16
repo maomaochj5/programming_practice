@@ -8,6 +8,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Find required Qt components
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Sql Concurrent Network PrintSupport Multimedia)
 
+# Add ZXing-C++ for real barcode recognition
+include(FetchContent)
+FetchContent_Declare(
+    ZXing
+    GIT_REPOSITORY https://github.com/zxing-cpp/zxing-cpp.git
+    GIT_TAG        v2.2.1  # 使用稳定版本
+)
+set(BUILD_READERS_ONLY ON)
+set(BUILD_EXAMPLES OFF)
+set(BUILD_BLACKBOX_TESTS OFF)
+FetchContent_MakeAvailable(ZXing)
+
 # Enable Qt MOC, UIC, and RCC
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
@@ -89,11 +101,13 @@ target_link_libraries(SmartPOSCore PRIVATE
     Qt6::Network
     Qt6::PrintSupport
     Qt6::Multimedia
+    ZXing::ZXing
 )
 
 # Add include directories for auto-generated UI headers
 target_include_directories(SmartPOSCore PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/SmartPOSCore_autogen/include
+    ${CMAKE_BINARY_DIR}/_deps/zxing-src/core/src/zxing
 )
 
 # Create executable
@@ -108,6 +122,7 @@ target_link_libraries(SmartPOS PRIVATE
     Qt6::Network
     Qt6::PrintSupport
     Qt6::Multimedia
+    ZXing::ZXing
 )
 
 # Add include directories for executable
