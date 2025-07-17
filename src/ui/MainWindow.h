@@ -42,7 +42,6 @@ class BarcodeScanner;
 class Product;
 class Sale;
 class CartDelegate;
-class RecommendationDialog;
 class AIClient; // New AI Client
 
 /**
@@ -108,9 +107,7 @@ private slots:
     // 新的推荐控制器槽函数
     void onCartUpdated();
     void onAiSearchClicked();
-    void onRecommendationsReady(const QString& responseText, const QList<int>& productIds);
-    void onCartRecommendationsReady(const QList<int>& productIds);  // 购物车推荐（左下角）
-    void onUserQueryRecommendationsReady(const QString& responseText, const QList<int>& productIds);  // 用户查询推荐（弹出对话框）
+    void onUserQueryRecommendationsReady(const QString& responseText, const QList<int>& productIds);  // 用户查询推荐（显示在左下角）
     void addRecommendedItemsToCart(const QList<int>& productIds);
     
     // Unified search/scan slot
@@ -228,9 +225,6 @@ private:
     // 额外的UI组件（程序化创建）
     QPushButton* m_aiSearchButton;
     
-    // 推荐对话框（单例模式，避免重复创建）
-    RecommendationDialog* m_recommendationDialog;
-
     // 状态保存
     Sale* m_lastCompletedSale = nullptr;
 

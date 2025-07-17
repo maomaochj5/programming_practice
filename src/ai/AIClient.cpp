@@ -6,127 +6,49 @@
 #include <QDebug>
 #include <QFile>
 #include <QDir>
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
 
 AIClient::AIClient(QObject *parent)
-    : QObject(parent), m_networkManager(new QNetworkAccessManager(this)), m_mappingsLoaded(false)
+    : QObject(parent), m_networkManager(new QNetworkAccessManager(this))
 {
     m_baseUrl = "http://127.0.0.1:5001";
     connect(m_networkManager, &QNetworkAccessManager::finished, this, &AIClient::onNetworkReplyFinished);
-    loadIdMappings();
+    qDebug() << "AIClient initialized - using direct barcode lookup (no mapping files required)";
 }
 
-void AIClient::loadIdMappings()
-{
-    // Use relative path from build directory to project root
-    QString aiToDbPath = "../Ai_model/ai_to_db_id_mapping.json";
-    QString dbToAiPath = "../Ai_model/db_to_ai_id_mapping.json";
-    
-    // Load AI ID to DB ID mapping
-    QFile aiToDbFile(aiToDbPath);
-    if (aiToDbFile.open(QIODevice::ReadOnly)) {
-        QByteArray data = aiToDbFile.readAll();
-        QJsonDocument doc = QJsonDocument::fromJson(data);
-        if (doc.isObject()) {
-            m_aiToDbMapping = doc.object();
-            qDebug() << "Loaded AI to DB ID mapping with" << m_aiToDbMapping.size() << "entries";
-        }
-    } else {
-        qWarning() << "Failed to load AI to DB ID mapping from" << aiToDbPath;
-    }
-    
-    // Load DB ID to AI ID mapping
-    QFile dbToAiFile(dbToAiPath);
-    if (dbToAiFile.open(QIODevice::ReadOnly)) {
-        QByteArray data = dbToAiFile.readAll();
-        QJsonDocument doc = QJsonDocument::fromJson(data);
-        if (doc.isObject()) {
-            m_dbToAiMapping = doc.object();
-            qDebug() << "Loaded DB to AI ID mapping with" << m_dbToAiMapping.size() << "entries";
-        }
-    } else {
-        qWarning() << "Failed to load DB to AI ID mapping from" << dbToAiPath;
-    }
-    
-    m_mappingsLoaded = (!m_aiToDbMapping.isEmpty() && !m_dbToAiMapping.isEmpty());
-    if (m_mappingsLoaded) {
-        qDebug() << "ID mappings loaded successfully";
-    } else {
-        qWarning() << "ID mappings failed to load - product recommendations may not work correctly";
-    }
-}
-
-QList<QString> AIClient::convertDbIdsToAiIds(const QList<int>& dbIds)
-{
-    QList<QString> aiIds;
-    if (!m_mappingsLoaded) {
-        qWarning() << "ID mappings not loaded, cannot convert DB IDs to AI IDs";
-        return aiIds;
-    }
-    
-    for (int dbId : dbIds) {
-        QString dbIdStr = QString::number(dbId);
-        if (m_dbToAiMapping.contains(dbIdStr)) {
-            QString aiId = m_dbToAiMapping.value(dbIdStr).toString();
-            aiIds.append(aiId);
-            qDebug() << "Converted DB ID" << dbId << "to AI ID" << aiId;
-        } else {
-            qWarning() << "No AI ID mapping found for DB ID:" << dbId;
-        }
-    }
-    return aiIds;
-}
-
-QList<int> AIClient::convertAiIdsToDbIds(const QList<QString>& aiIds)
+QList<int> AIClient::convertBarcodeIdsToDbIds(const QList<QString>& barcodeIds)
 {
     QList<int> dbIds;
-    if (!m_mappingsLoaded) {
-        qWarning() << "ID mappings not loaded, cannot convert AI IDs to DB IDs";
+    
+    // Get the database connection from DatabaseManager
+    QSqlDatabase db = QSqlDatabase::database("mainConnection");
+    if (!db.isOpen()) {
+        qWarning() << "Database not available for barcode lookup";
         return dbIds;
     }
     
-    for (const QString& aiId : aiIds) {
-        if (m_aiToDbMapping.contains(aiId)) {
-            int dbId = m_aiToDbMapping.value(aiId).toInt();
+    QSqlQuery query(db);
+    query.prepare("SELECT product_id FROM Products WHERE barcode = ?");
+    
+    for (const QString& barcodeId : barcodeIds) {
+        query.bindValue(0, barcodeId);
+        
+        if (query.exec() && query.next()) {
+            int dbId = query.value(0).toInt();
             dbIds.append(dbId);
-            qDebug() << "Converted AI ID" << aiId << "to DB ID" << dbId;
+            qDebug() << "Found product for barcode" << barcodeId << "-> DB ID:" << dbId;
         } else {
-            qWarning() << "No DB ID mapping found for AI ID:" << aiId;
+            qWarning() << "No product found for barcode:" << barcodeId;
         }
     }
+    
     return dbIds;
-}
-
-void AIClient::getRecommendations(const QList<int>& cartProductIds)
-{
-    if (!m_mappingsLoaded) {
-        emit errorOccurred("ID mappings not loaded. Please check mapping files.");
-        return;
-    }
-    
-    m_currentRequestType = CartRecommendation;  // 设置请求类型为购物车推荐
-    
-    // Convert DB IDs to AI IDs for the API call
-    QList<QString> aiIds = convertDbIdsToAiIds(cartProductIds);
-    
-    QJsonObject json;
-    QJsonArray idArray;
-    for (const QString& aiId : aiIds) {
-        idArray.append(aiId);
-    }
-    json["cart_items"] = idArray;
-
-    qDebug() << "Sending cart recommendation request with AI IDs:" << aiIds;
-
-    QNetworkRequest request(QUrl(m_baseUrl + "/recommend"));
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-
-    m_networkManager->post(request, QJsonDocument(json).toJson());
 }
 
 void AIClient::ask(const QString& userQuery)
 {
-    m_currentRequestType = UserQuery;  // 设置请求类型为用户查询
-    
     QJsonObject json;
     json["query"] = userQuery;
 
@@ -159,32 +81,25 @@ void AIClient::onNetworkReplyFinished(QNetworkReply *reply)
     QJsonObject jsonObj = jsonDoc.object();
     QString responseText = jsonObj.value("response").toString();
     
-    QList<QString> aiProductIds;
+    QList<QString> barcodeIds;
     if (jsonObj.contains("products") && jsonObj["products"].isArray()) {
         QJsonArray productsArray = jsonObj["products"].toArray();
         for (const QJsonValue &value : productsArray) {
-            QString aiId = value.toString();
-            aiProductIds.append(aiId);
+            QString barcodeId = value.toString();
+            barcodeIds.append(barcodeId);
         }
     }
 
-    // Convert AI IDs back to DB IDs for the C++ application
-    QList<int> dbProductIds = convertAiIdsToDbIds(aiProductIds);
+    // Convert barcode IDs to database product IDs
+    QList<int> dbProductIds = convertBarcodeIdsToDbIds(barcodeIds);
     
-    qDebug() << "Received AI response with" << aiProductIds.size() << "AI IDs, converted to" << dbProductIds.size() << "DB IDs";
-    qDebug() << "AI IDs:" << aiProductIds;
-    qDebug() << "DB IDs:" << dbProductIds;
+    qDebug() << "Received AI response with" << barcodeIds.size() << "barcode IDs, found" << dbProductIds.size() << "products in database";
+    qDebug() << "Barcode IDs:" << barcodeIds;
+    qDebug() << "DB Product IDs:" << dbProductIds;
 
-    // 根据请求类型发射不同的信号
-    if (m_currentRequestType == CartRecommendation) {
-        qDebug() << "Emitting cartRecommendationsReady signal for cart recommendation";
-        emit cartRecommendationsReady(dbProductIds);
-    } else if (m_currentRequestType == UserQuery) {
-        qDebug() << "Emitting userQueryRecommendationsReady signal for user query";
-        emit userQueryRecommendationsReady(responseText, dbProductIds);
-    }
+    // Emit user query recommendations signal for display in the lower-left corner
+    qDebug() << "Emitting userQueryRecommendationsReady signal for user query";
+    emit userQueryRecommendationsReady(responseText, dbProductIds);
     
-    // 保持向后兼容性，仍然发射原始信号
-    emit recommendationsReady(responseText, dbProductIds);
     reply->deleteLater();
 } 

@@ -19,7 +19,7 @@ ProductDialog::ProductDialog(QWidget *parent)
 }
 
 ProductDialog::ProductDialog(const Product* product, QWidget *parent)
-    : QDialog(parent)
+    : QDialog(parent), m_editMode(true)
 {
     qDebug() << "ProductDialog 构造(有product), product指针:" << product;
     setWindowTitle(tr("编辑商品"));

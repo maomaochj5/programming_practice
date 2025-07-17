@@ -512,7 +512,7 @@ class RAG_Recommender:
 
     def _get_popular_products(self, count=3):
         """返回热门商品ID列表"""
-        popular_ids = ['11526975', '17322891', '10560818']
+        popular_ids = ["ELEC001", "SPORTS001", "BOOK001"]
         return popular_ids[:count]
 
     def _generate_llm_response(self, query, products):

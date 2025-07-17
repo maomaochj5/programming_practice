@@ -11,7 +11,6 @@
 #include "PaymentDialog.h"
 #include "ProductManagementDialog.h"
 #include "SalesReportDialog.h"
-#include "RecommendationDialog.h"
 #include "../utils/ReceiptPrinter.h"
 #include "ui/CartDelegate.h"
 #include "ui/RecommendationItemWidget.h"
@@ -255,8 +254,6 @@ void MainWindow::setupConnections()
     connect(m_checkoutController.get(), &CheckoutController::saleSuccessfullyCompleted, this, &MainWindow::onSaleCompleted);
 
     // Connect AI Client signals
-    connect(m_aiClient.get(), &AIClient::recommendationsReady, this, &MainWindow::onRecommendationsReady);
-    connect(m_aiClient.get(), &AIClient::cartRecommendationsReady, this, &MainWindow::onCartRecommendationsReady);
     connect(m_aiClient.get(), &AIClient::userQueryRecommendationsReady, this, &MainWindow::onUserQueryRecommendationsReady);
     connect(m_aiClient.get(), &AIClient::errorOccurred, this, &MainWindow::showErrorMessage);
     
@@ -479,16 +476,9 @@ void MainWindow::onPrintReceipt()
 
 void MainWindow::onRefreshRecommendations()
 {
-    if (m_currentSale && !m_currentSale->isEmpty()) {
-        QList<int> productIds;
-        for (auto* item : m_currentSale->getItems()) {
-            productIds.append(item->getProduct()->getProductId());
-        }
-        m_aiClient->getRecommendations(productIds);
-    } else {
-        // If cart is empty, get popular recommendations
-        m_aiClient->getRecommendations({});
-    }
+    // 购物车推荐功能已删除，清空推荐列表
+    updateRecommendationDisplay(QList<int>());
+    showSuccessMessage("推荐列表已清空，请使用AI导购功能获取推荐");
 }
 
 void MainWindow::onRecommendationAddToCart(int productId)
@@ -950,23 +940,10 @@ void MainWindow::updateScanAnimation(double progress)
 
 void MainWindow::onCartUpdated()
 {
-    qDebug() << "Cart updated, triggering recommendation.";
+    qDebug() << "Cart updated, clearing recommendations.";
     
-    if (!m_currentSale || m_currentSale->isEmpty()) {
-        updateRecommendationDisplay(QList<int>()); // Clear recommendations
-        return;
-    }
-    
-    QList<int> cartProductIds;
-    for (auto* item : m_currentSale->getItems()) {
-        if (item && item->getProduct()) {
-            cartProductIds.append(item->getProduct()->getProductId());
-        }
-    }
-    
-    if (!cartProductIds.isEmpty()) {
-        m_aiClient->getRecommendations(cartProductIds);
-    }
+    // 购物车更新时只清除推荐列表，不再自动生成推荐
+    updateRecommendationDisplay(QList<int>());
 }
 
 void MainWindow::onAiSearchClicked()
@@ -979,34 +956,17 @@ void MainWindow::onAiSearchClicked()
     }
 }
 
-void MainWindow::onRecommendationsReady(const QString& responseText, const QList<int>& productIds)
-{
-    qDebug() << "AI Response: " << responseText;
-    
-    RecommendationDialog dialog(m_productManager.get(), productIds, this);
-    dialog.setRecommendationText(responseText);
-    
-    if (dialog.exec() == QDialog::Accepted) {
-        addRecommendedItemsToCart(dialog.getSelectedProductIds());
-    }
-}
-
-void MainWindow::onCartRecommendationsReady(const QList<int>& productIds)
-{
-    qDebug() << "Cart recommendations ready, updating left panel with" << productIds.size() << "products";
-    updateRecommendationDisplay(productIds);
-}
-
 void MainWindow::onUserQueryRecommendationsReady(const QString& responseText, const QList<int>& productIds)
 {
-    qDebug() << "User query recommendations ready, showing dialog with" << productIds.size() << "products";
+    qDebug() << "User query recommendations ready, updating left panel with" << productIds.size() << "products";
     qDebug() << "AI Response: " << responseText;
     
-    RecommendationDialog dialog(m_productManager.get(), productIds, this);
-    dialog.setRecommendationText(responseText);
+    // 将AI导购的结果显示在左下角推荐列表中
+    updateRecommendationDisplay(productIds);
     
-    if (dialog.exec() == QDialog::Accepted) {
-        addRecommendedItemsToCart(dialog.getSelectedProductIds());
+    // 显示AI响应文本作为成功消息
+    if (!responseText.isEmpty()) {
+        showSuccessMessage(QString("AI导购推荐：%1").arg(responseText.left(100))); // 限制长度避免消息过长
     }
 }
 
