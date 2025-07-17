@@ -222,7 +222,7 @@ void DebugGUITest::testProductManagerInitialization()
     }
     
     // 测试获取所有商品
-    auto products = productManager->getAllProducts();
+    QList<Product*> products = productManager->getAllProductsSync();
     qDebug() << "当前商品数量:" << products.size();
     
     qDebug() << "✓ 商品管理器初始化测试通过";

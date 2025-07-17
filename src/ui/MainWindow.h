@@ -42,6 +42,8 @@ class BarcodeScanner;
 class Product;
 class Sale;
 class CartDelegate;
+class RecommendationController;
+class RecommendationDialog;
 
 /**
  * @brief MainWindow类 - 主窗口界面
@@ -103,6 +105,12 @@ private slots:
     void onRefreshRecommendations();
     void onRecommendationAddToCart(int productId);
     
+    // 新的推荐控制器槽函数
+    void onCartUpdated();
+    void onAiSearchClicked();
+    void onRecommendationsReady(const QList<Product*>& products);
+    void addRecommendedItemsToCart(const QList<int>& productIds);
+    
     // Unified search/scan slot
     void onSearchOrScan();
 
@@ -141,6 +149,11 @@ private:
      */
     void setupStyleSheet();
     
+    /**
+     * @brief 创建菜单栏
+     */
+    void createMenuBar();
+    
 
     
     /**
@@ -162,6 +175,11 @@ private:
      * @brief 更新推荐商品显示（带参数）
      */
     void updateRecommendationDisplay(const QList<int>& productIds);
+    
+    /**
+     * @brief 更新推荐商品显示（带Product对象列表）
+     */
+    void updateRecommendationDisplay(const QList<Product*>& products);
     
     /**
      * @brief 更新总计显示
@@ -192,10 +210,17 @@ private:
     std::unique_ptr<ProductManager> m_productManager;
     std::unique_ptr<AIRecommender> m_aiRecommender;
     std::unique_ptr<BarcodeScanner> m_barcodeScanner;
+    std::unique_ptr<RecommendationController> m_recommendationController;
     CartDelegate* m_cartDelegate;
     
     // UI文件中的组件引用（通过UI文件自动生成）
     QStandardItemModel* m_productModel;
+
+    // 额外的UI组件（程序化创建）
+    QPushButton* m_aiSearchButton;
+    
+    // 推荐对话框（单例模式，避免重复创建）
+    RecommendationDialog* m_recommendationDialog;
 
     // 状态保存
     Sale* m_lastCompletedSale = nullptr;

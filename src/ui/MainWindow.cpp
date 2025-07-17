@@ -11,7 +11,9 @@
 #include "PaymentDialog.h"
 #include "ProductManagementDialog.h"
 #include "SalesReportDialog.h"
+#include "RecommendationDialog.h"
 #include "../utils/ReceiptPrinter.h"
+#include "../controllers/RecommendationController.h"
 #include "ui/CartDelegate.h"
 #include "ui/RecommendationItemWidget.h"
 
@@ -51,6 +53,7 @@ MainWindow::MainWindow(QWidget *parent)
     , m_currentSale(nullptr)
     , m_currentUser("收银员")
     , m_scanAnimationLabel(nullptr)
+    , m_recommendationDialog(nullptr)
 {
     qDebug() << "MainWindow 构造函数开始";
     
@@ -59,6 +62,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_productManager = std::make_unique<ProductManager>(this);
     m_aiRecommender = std::make_unique<AIRecommender>(this);
     m_barcodeScanner = std::make_unique<BarcodeScanner>(this);
+    m_recommendationController = std::make_unique<RecommendationController>(m_productManager.get(), this);
     
     // 初始化UI
     initializeUI();
@@ -155,6 +159,20 @@ void MainWindow::initializeUI()
         ui->recommendationListWidget->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     }
     
+    // 创建AI导购按钮并添加到搜索布局
+    m_aiSearchButton = new QPushButton("AI导购", this);
+    m_aiSearchButton->setObjectName("aiSearchButton");
+    m_aiSearchButton->setToolTip("使用AI进行智能商品推荐");
+    m_aiSearchButton->setMinimumHeight(30);
+    
+    // 将AI导购按钮添加到搜索输入布局
+    if (ui->searchInputLayout) {
+        ui->searchInputLayout->addWidget(m_aiSearchButton);
+    }
+
+    // 创建菜单栏
+    createMenuBar();
+    
     // 延迟调用这些函数，确保 UI 完全初始化
     QTimer::singleShot(0, this, [this]() {
         // Product display is updated asynchronously when the allProductsChanged signal is emitted.
@@ -162,6 +180,67 @@ void MainWindow::initializeUI()
     });
     
     qDebug() << "MainWindow::initializeUI 完成";
+}
+
+void MainWindow::createMenuBar()
+{
+    QMenuBar* menuBar = this->menuBar();
+    if (!menuBar) {
+        qWarning() << "无法创建菜单栏";
+        return;
+    }
+    
+    // 文件菜单
+    QMenu* fileMenu = menuBar->addMenu("文件(&F)");
+    QAction* newSaleAction = fileMenu->addAction("新建销售(&N)");
+    QAction* exitAction = fileMenu->addAction("退出(&X)");
+    fileMenu->addSeparator();
+    QAction* importProductsAction = fileMenu->addAction("导入商品(&I)");
+    QAction* exportProductsAction = fileMenu->addAction("导出商品(&E)");
+    
+    // 销售菜单
+    QMenu* saleMenu = menuBar->addMenu("销售(&S)");
+    QAction* processPaymentAction = saleMenu->addAction("处理支付(&P)");
+    QAction* clearCartAction = saleMenu->addAction("清空购物车(&C)");
+    QAction* printReceiptAction = saleMenu->addAction("打印小票(&R)");
+    
+    // 商品菜单
+    QMenu* productMenu = menuBar->addMenu("商品(&P)");
+    QAction* manageProductsAction = productMenu->addAction("商品管理(&M)");
+    QAction* searchProductAction = productMenu->addAction("搜索商品(&S)");
+    
+    // 报告菜单
+    QMenu* reportMenu = menuBar->addMenu("报告(&R)");
+    QAction* salesReportAction = reportMenu->addAction("销售报告(&S)");
+    QAction* inventoryReportAction = reportMenu->addAction("库存报告(&I)");
+    
+    // 工具菜单
+    QMenu* toolsMenu = menuBar->addMenu("工具(&T)");
+    QAction* aiRecommendationAction = toolsMenu->addAction("AI推荐(&A)");
+    QAction* barcodeScanAction = toolsMenu->addAction("条码扫描(&B)");
+    QAction* imageScanAction = toolsMenu->addAction("图片扫描(&I)");
+    
+    // 帮助菜单
+    QMenu* helpMenu = menuBar->addMenu("帮助(&H)");
+    QAction* aboutAction = helpMenu->addAction("关于(&A)");
+    QAction* helpAction = helpMenu->addAction("帮助(&H)");
+    
+    // 连接菜单动作
+    connect(newSaleAction, &QAction::triggered, this, &MainWindow::onNewSale);
+    connect(exitAction, &QAction::triggered, this, &QWidget::close);
+    connect(processPaymentAction, &QAction::triggered, this, &MainWindow::onProcessPayment);
+    connect(clearCartAction, &QAction::triggered, this, &MainWindow::onClearSale);
+    connect(printReceiptAction, &QAction::triggered, this, &MainWindow::onPrintReceipt);
+    connect(manageProductsAction, &QAction::triggered, this, &MainWindow::onManageProducts);
+    connect(searchProductAction, &QAction::triggered, this, &MainWindow::onSearchProduct);
+    connect(salesReportAction, &QAction::triggered, this, &MainWindow::onShowStatistics);
+    connect(aiRecommendationAction, &QAction::triggered, this, &MainWindow::onAiSearchClicked);
+    connect(barcodeScanAction, &QAction::triggered, this, &MainWindow::onSelectImage);
+    connect(imageScanAction, &QAction::triggered, this, &MainWindow::onSelectImage);
+    connect(aboutAction, &QAction::triggered, this, &MainWindow::onAbout);
+    connect(helpAction, &QAction::triggered, this, &MainWindow::onAbout);
+    
+    qDebug() << "菜单栏创建完成";
 }
 
 void MainWindow::connectSignals()
@@ -184,10 +263,22 @@ void MainWindow::connectSignals()
     if (ui->refreshRecommendationButton) connect(ui->refreshRecommendationButton, &QPushButton::clicked, this, &MainWindow::onRefreshRecommendations);
     if (ui->discountButton) connect(ui->discountButton, &QPushButton::clicked, this, &MainWindow::onApplyDiscount);
 
+    // 连接AI导购按钮
+    if (m_aiSearchButton) connect(m_aiSearchButton, &QPushButton::clicked, this, &MainWindow::onAiSearchClicked);
+
     // This is a robust connection. When a sale is structurally changed (item added/removed),
     // CheckoutController will emit saleUpdated(), which triggers a full refresh.
     connect(m_checkoutController.get(), &CheckoutController::saleUpdated, this, &MainWindow::updateCartDisplay);
+    connect(m_checkoutController.get(), &CheckoutController::saleUpdated, this, &MainWindow::onCartUpdated);
     connect(m_checkoutController.get(), &CheckoutController::saleSuccessfullyCompleted, this, &MainWindow::onSaleCompleted);
+
+    // 连接推荐控制器信号 (使用 QueuedConnection 确保线程安全)
+    if (m_recommendationController) {
+        connect(m_recommendationController.get(), &RecommendationController::recommendationsReady, 
+                this, &MainWindow::onRecommendationsReady, Qt::QueuedConnection);
+        connect(m_recommendationController.get(), &RecommendationController::recommendationError,
+                this, &MainWindow::showErrorMessage, Qt::QueuedConnection);
+    }
     
     // Delegate and model signals
     connect(m_cartDelegate, &CartDelegate::removeItem, this, &MainWindow::onRemoveItemFromCart);
@@ -694,6 +785,30 @@ void MainWindow::updateRecommendationDisplay(const QList<int>& productIds)
     }
 }
 
+void MainWindow::updateRecommendationDisplay(const QList<Product*>& products)
+{
+    if (!ui->recommendationListWidget) {
+        qDebug() << "updateRecommendationDisplay: recommendationListWidget is null";
+        return;
+    }
+    
+    ui->recommendationListWidget->clear();
+    
+    for (const Product* product : products) {
+        if (product) {
+            auto* itemWidget = new RecommendationItemWidget(product);
+            auto* listItem = new QListWidgetItem(ui->recommendationListWidget);
+            listItem->setSizeHint(itemWidget->sizeHint());
+            ui->recommendationListWidget->addItem(listItem);
+            ui->recommendationListWidget->setItemWidget(listItem, itemWidget);
+
+            connect(itemWidget, &RecommendationItemWidget::addToCartClicked, this, &MainWindow::onRecommendationAddToCart);
+        }
+    }
+    
+    qDebug() << "左下角推荐列表已更新，显示" << products.size() << "个推荐商品";
+}
+
 void MainWindow::onShowStatistics()
 {
     auto* dialog = new SalesReportDialog(this);
@@ -855,4 +970,161 @@ void MainWindow::updateScanAnimation(double progress)
 
     m_scanAnimationLabel->setPixmap(pixmap);
     m_scanAnimationLabel->show();
+}
+
+// ========== 新增的推荐功能槽函数 ==========
+
+void MainWindow::onCartUpdated()
+{
+    qDebug() << "MainWindow::onCartUpdated 购物车更新，触发推荐生成";
+    
+    if (!m_recommendationController) {
+        qWarning() << "推荐控制器未初始化，跳过推荐生成";
+        return;
+    }
+    
+    if (!m_currentSale || m_currentSale->isEmpty()) {
+        qDebug() << "购物车为空，不生成推荐";
+        return;
+    }
+    
+    // 获取购物车中的商品ID列表
+    QList<int> cartProductIds;
+    qDebug() << "当前购物车中的商品项数量:" << m_currentSale->getItems().size();
+    
+    for (auto* item : m_currentSale->getItems()) {
+        if (item && item->getProduct()) {
+            int productId = item->getProduct()->getProductId();
+            cartProductIds.append(productId);
+            qDebug() << "  购物车商品:" << item->getProduct()->getName() 
+                     << "(ID:" << productId << ", 数量:" << item->getQuantity() << ")";
+        }
+    }
+    
+    qDebug() << "提取的购物车商品ID总数:" << cartProductIds.size();
+    
+    if (!cartProductIds.isEmpty()) {
+        qDebug() << "购物车商品ID完整列表:" << cartProductIds;
+        qDebug() << "调用推荐控制器生成基于购物车的推荐...";
+        m_recommendationController->generateRecommendationForCart(cartProductIds);
+    } else {
+        qDebug() << "购物车商品ID列表为空，不生成推荐";
+    }
+}
+
+void MainWindow::onAiSearchClicked()
+{
+    qDebug() << "MainWindow::onAiSearchClicked AI导购按钮被点击";
+    
+    if (!m_recommendationController) {
+        showErrorMessage("推荐系统未初始化");
+        return;
+    }
+    
+    if (!ui->searchLineEdit) {
+        showErrorMessage("搜索框不可用");
+        return;
+    }
+    
+    QString queryText = ui->searchLineEdit->text().trimmed();
+    if (queryText.isEmpty()) {
+        showErrorMessage("请输入搜索内容进行AI推荐");
+        return;
+    }
+    
+    qDebug() << "使用AI推荐查询:" << queryText;
+    m_recommendationController->generateRecommendationForQuery(queryText);
+    
+    // 清空搜索框
+    ui->searchLineEdit->clear();
+}
+
+void MainWindow::onRecommendationsReady(const QList<Product*>& products)
+{
+    qDebug() << "MainWindow::onRecommendationsReady 收到推荐结果，商品数量:" << products.size();
+    qDebug() << "推荐商品详细信息:";
+    for (int i = 0; i < products.size(); ++i) {
+        const Product* product = products.at(i);
+        if (product) {
+            qDebug() << QString("  [%1] ID:%2 名称:%3 价格:¥%4 类别:%5")
+                        .arg(i + 1)
+                        .arg(product->getProductId())
+                        .arg(product->getName())
+                        .arg(product->getPrice(), 0, 'f', 2)
+                        .arg(product->getCategory());
+        } else {
+            qWarning() << QString("  [%1] 商品指针为空!").arg(i + 1);
+        }
+    }
+    
+    if (products.isEmpty()) {
+        qDebug() << "推荐列表为空，显示错误消息";
+        showErrorMessage("AI未找到合适的推荐商品");
+        return;
+    }
+    
+    // 直接更新左下角的推荐列表，而不是显示弹窗
+    qDebug() << "更新左下角推荐列表显示";
+    updateRecommendationDisplay(products);
+    
+    // 显示成功消息
+    showSuccessMessage(QString("AI推荐了%1个商品").arg(products.size()));
+}
+
+void MainWindow::addRecommendedItemsToCart(const QList<int>& productIds)
+{
+    qDebug() << "MainWindow::addRecommendedItemsToCart 开始添加推荐商品到购物车";
+    qDebug() << "接收到的商品ID列表:" << productIds;
+    qDebug() << "商品ID数量:" << productIds.size();
+    
+    if (productIds.isEmpty()) {
+        qDebug() << "没有选择任何推荐商品，直接返回";
+        return;
+    }
+    
+    if (!m_currentSale) {
+        showErrorMessage("当前没有进行中的销售，无法添加商品");
+        return;
+    }
+    
+    int successCount = 0;
+    int totalCount = productIds.size();
+    
+    for (int productId : productIds) {
+        qDebug() << QString("正在处理商品ID: %1").arg(productId);
+        Product* product = m_productManager->getProductById(productId);
+        if (product) {
+            qDebug() << QString("  找到商品: %1 (库存: %2)").arg(product->getName()).arg(product->getStockQuantity());
+            if (product->isInStock()) {
+                qDebug() << QString("  商品有库存，添加到购物车: %1").arg(product->getName());
+                m_checkoutController->addItemToSale(product, 1);
+                successCount++;
+                qDebug() << "✓ 成功添加推荐商品:" << product->getName() << "(ID:" << productId << ")";
+            } else {
+                qWarning() << "✗ 推荐商品缺货:" << product->getName() << "(ID:" << productId << ")";
+            }
+        } else {
+            qWarning() << "✗ 未找到推荐商品ID:" << productId;
+        }
+    }
+    
+    // 显示结果消息
+    qDebug() << "推荐商品添加处理完成，统计结果:";
+    qDebug() << "  总商品数:" << totalCount;
+    qDebug() << "  成功添加:" << successCount;
+    qDebug() << "  失败数量:" << (totalCount - successCount);
+    
+    if (successCount == totalCount) {
+        qDebug() << "所有推荐商品都成功添加到购物车";
+        showSuccessMessage(QString("成功添加%1个推荐商品到购物车").arg(successCount));
+    } else if (successCount > 0) {
+        qDebug() << "部分推荐商品添加成功";
+        showSuccessMessage(QString("成功添加%1个推荐商品到购物车（共%2个商品，%3个不可用）")
+                          .arg(successCount).arg(totalCount).arg(totalCount - successCount));
+    } else {
+        qDebug() << "没有任何推荐商品添加成功";
+        showErrorMessage("没有成功添加任何推荐商品，请检查商品库存");
+    }
+    
+    qDebug() << "MainWindow::addRecommendedItemsToCart 处理完成，成功:" << successCount << "总计:" << totalCount;
 }

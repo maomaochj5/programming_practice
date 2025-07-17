@@ -27,6 +27,11 @@ void ProductManager::getAllProducts()
     m_databaseManager->getAllProducts();
 }
 
+QList<Product*> ProductManager::getAllProductsSync() const
+{
+    return m_productCache.values();
+}
+
 void ProductManager::onProductsRead(const QList<Product*>& products)
 {
     qDeleteAll(m_productCache);

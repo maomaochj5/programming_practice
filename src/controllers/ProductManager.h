@@ -16,6 +16,7 @@ public:
 
     // Public API for the UI
     void getAllProducts(); // Asynchronous trigger
+    QList<Product*> getAllProductsSync() const;
     Product* getProductById(int id);
     Product* getProductByName(const QString& name);
     void getProductByBarcode(const QString& barcode);

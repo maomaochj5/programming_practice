@@ -49,11 +49,13 @@ set(CORE_SOURCES
     src/models/SaleItem.cpp
     src/controllers/ProductManager.cpp
     src/controllers/CheckoutController.cpp
+    src/controllers/RecommendationController.cpp
     src/ui/MainWindow.cpp
     src/ui/ProductDialog.cpp
     src/ui/PaymentDialog.cpp
     src/ui/CartDelegate.cpp
     src/ui/RecommendationItemWidget.cpp
+    src/ui/RecommendationDialog.cpp
     src/ui/ProductManagementDialog.cpp
     src/ui/SalesReportDialog.cpp
     src/database/DatabaseManager.cpp
@@ -77,11 +79,13 @@ set(HEADERS
     src/models/SaleItem.h
     src/controllers/ProductManager.h
     src/controllers/CheckoutController.h
+    src/controllers/RecommendationController.h
     src/ui/MainWindow.h
     src/ui/PaymentDialog.h
     src/ui/ProductDialog.h
     src/ui/ProductManagementDialog.h
     src/ui/RecommendationItemWidget.h
+    src/ui/RecommendationDialog.h
     src/ui/SalesReportDialog.h
     src/database/DatabaseManager.h
     src/barcode/BarcodeScanner.h
@@ -179,3 +183,23 @@ if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+# 调试推荐功能的测试程序
+add_executable(test_recommendation test_recommendation.cpp)
+target_link_libraries(test_recommendation PRIVATE
+    SmartPOSCore
+    Qt6::Core
+    Qt6::Sql
+    Qt6::Network
+)
+target_include_directories(test_recommendation PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}/SmartPOSCore_autogen/include
+)
+
+# 商品导入程序
+add_executable(import_products import_products.cpp)
+target_link_libraries(import_products PRIVATE
+    Qt6::Core
+    Qt6::Sql
+)

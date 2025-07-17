@@ -1,0 +1,9 @@
+Flask==2.3.3
+Flask-CORS==4.0.0
+sentence-transformers==2.2.2
+faiss-cpu==1.7.4
+transformers==4.35.2
+torch==2.1.0
+jieba==0.42.1
+numpy==1.24.3
+accelerate 
