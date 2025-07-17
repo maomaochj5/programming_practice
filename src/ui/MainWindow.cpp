@@ -13,9 +13,9 @@
 #include "SalesReportDialog.h"
 #include "RecommendationDialog.h"
 #include "../utils/ReceiptPrinter.h"
-#include "../controllers/RecommendationController.h"
 #include "ui/CartDelegate.h"
 #include "ui/RecommendationItemWidget.h"
+#include "ai/AIClient.h"
 
 #include <QPainter>
 #include <QApplication>
@@ -47,45 +47,21 @@
 #include <QFileInfo>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(std::make_unique<Ui::MainWindow>())
-    , m_isClosing(false)
-    , m_currentSale(nullptr)
-    , m_currentUser("收银员")
-    , m_scanAnimationLabel(nullptr)
-    , m_recommendationDialog(nullptr)
+    : QMainWindow(parent),
+      ui(std::make_unique<Ui::MainWindow>()),
+      m_checkoutController(std::make_unique<CheckoutController>()),
+      m_productManager(std::make_unique<ProductManager>()),
+      m_aiClient(std::make_unique<AIClient>(this)),
+      m_barcodeScanner(std::make_unique<BarcodeScanner>(this))
 {
-    qDebug() << "MainWindow 构造函数开始";
-    
-    // 初始化控制器
-    m_checkoutController = std::make_unique<CheckoutController>(this);
-    m_productManager = std::make_unique<ProductManager>(this);
-    m_aiRecommender = std::make_unique<AIRecommender>(this);
-    m_barcodeScanner = std::make_unique<BarcodeScanner>(this);
-    m_recommendationController = std::make_unique<RecommendationController>(m_productManager.get(), this);
-    
-    // 初始化UI
+    qDebug() << "MainWindow constructor start";
     initializeUI();
-    
-    // 连接信号与槽
-    connectSignals();
-    
-    // 设置样式
-    setupStyleSheet();
-    
-    // 启动新的销售
+    setupConnections();
     onNewSale();
-    
-    // 异步刷新商品列表
-    m_productManager->getAllProducts();
-    
-    // Setup timer for clock
-    QTimer *timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, this, &MainWindow::updateTime);
-    timer->start(1000);
-    updateTime(); // Initial call
-    
-    qDebug() << "主窗口初始化完成";
+    m_productManager->getAllProducts(); // 触发产品显示更新
+    // updateRecommendationDisplay(); // This needs to be called with IDs
+    // startInitialImageScan();
+    qDebug() << "MainWindow constructor end";
 }
 
 MainWindow::~MainWindow()
@@ -179,6 +155,12 @@ void MainWindow::initializeUI()
         updateRecommendationDisplay();
     });
     
+    // 初始化时间更新定时器
+    m_timeUpdateTimer = new QTimer(this);
+    connect(m_timeUpdateTimer, &QTimer::timeout, this, &MainWindow::updateTime);
+    m_timeUpdateTimer->start(1000); // 每秒更新一次时间
+    updateTime(); // 立即更新一次时间显示
+    
     qDebug() << "MainWindow::initializeUI 完成";
 }
 
@@ -243,7 +225,7 @@ void MainWindow::createMenuBar()
     qDebug() << "菜单栏创建完成";
 }
 
-void MainWindow::connectSignals()
+void MainWindow::setupConnections()
 {
     if (ui->newSaleButton) connect(ui->newSaleButton, &QPushButton::clicked, this, &MainWindow::onNewSale);
     if (ui->checkoutButton) connect(ui->checkoutButton, &QPushButton::clicked, this, &MainWindow::onProcessPayment);
@@ -272,13 +254,11 @@ void MainWindow::connectSignals()
     connect(m_checkoutController.get(), &CheckoutController::saleUpdated, this, &MainWindow::onCartUpdated);
     connect(m_checkoutController.get(), &CheckoutController::saleSuccessfullyCompleted, this, &MainWindow::onSaleCompleted);
 
-    // 连接推荐控制器信号 (使用 QueuedConnection 确保线程安全)
-    if (m_recommendationController) {
-        connect(m_recommendationController.get(), &RecommendationController::recommendationsReady, 
-                this, &MainWindow::onRecommendationsReady, Qt::QueuedConnection);
-        connect(m_recommendationController.get(), &RecommendationController::recommendationError,
-                this, &MainWindow::showErrorMessage, Qt::QueuedConnection);
-    }
+    // Connect AI Client signals
+    connect(m_aiClient.get(), &AIClient::recommendationsReady, this, &MainWindow::onRecommendationsReady);
+    connect(m_aiClient.get(), &AIClient::cartRecommendationsReady, this, &MainWindow::onCartRecommendationsReady);
+    connect(m_aiClient.get(), &AIClient::userQueryRecommendationsReady, this, &MainWindow::onUserQueryRecommendationsReady);
+    connect(m_aiClient.get(), &AIClient::errorOccurred, this, &MainWindow::showErrorMessage);
     
     // Delegate and model signals
     connect(m_cartDelegate, &CartDelegate::removeItem, this, &MainWindow::onRemoveItemFromCart);
@@ -504,12 +484,10 @@ void MainWindow::onRefreshRecommendations()
         for (auto* item : m_currentSale->getItems()) {
             productIds.append(item->getProduct()->getProductId());
         }
-        auto recommendations = m_aiRecommender->getRecommendations(productIds);
-        updateRecommendationDisplay(recommendations);
+        m_aiClient->getRecommendations(productIds);
     } else {
         // If cart is empty, get popular recommendations
-        auto recommendations = m_aiRecommender->getPopularRecommendations(5);
-        updateRecommendationDisplay(recommendations);
+        m_aiClient->getRecommendations({});
     }
 }
 
@@ -753,13 +731,9 @@ void MainWindow::onRecommendationsUpdated(const QList<int>& productIds)
 
 void MainWindow::updateRecommendationDisplay()
 {
-    // Update with popular items if the cart is empty
-    if (m_currentSale == nullptr || m_currentSale->isEmpty()) {
-        updateRecommendationDisplay(m_aiRecommender->getPopularRecommendations(5));
-    } else {
-        // This case will be triggered when a sale is updated.
-        // The list of product IDs should be passed from onSaleUpdated -> onRecommendationsUpdated
-    }
+    // This function is now ambiguous. Call the specific versions directly.
+    // Or, decide on a default behavior. For now, we clear.
+    updateRecommendationDisplay(QList<int>());
 }
 
 void MainWindow::updateRecommendationDisplay(const QList<int>& productIds)
@@ -976,100 +950,66 @@ void MainWindow::updateScanAnimation(double progress)
 
 void MainWindow::onCartUpdated()
 {
-    qDebug() << "MainWindow::onCartUpdated 购物车更新，触发推荐生成";
-    
-    if (!m_recommendationController) {
-        qWarning() << "推荐控制器未初始化，跳过推荐生成";
-        return;
-    }
+    qDebug() << "Cart updated, triggering recommendation.";
     
     if (!m_currentSale || m_currentSale->isEmpty()) {
-        qDebug() << "购物车为空，不生成推荐";
+        updateRecommendationDisplay(QList<int>()); // Clear recommendations
         return;
     }
     
-    // 获取购物车中的商品ID列表
     QList<int> cartProductIds;
-    qDebug() << "当前购物车中的商品项数量:" << m_currentSale->getItems().size();
-    
     for (auto* item : m_currentSale->getItems()) {
         if (item && item->getProduct()) {
-            int productId = item->getProduct()->getProductId();
-            cartProductIds.append(productId);
-            qDebug() << "  购物车商品:" << item->getProduct()->getName() 
-                     << "(ID:" << productId << ", 数量:" << item->getQuantity() << ")";
+            cartProductIds.append(item->getProduct()->getProductId());
         }
     }
     
-    qDebug() << "提取的购物车商品ID总数:" << cartProductIds.size();
-    
     if (!cartProductIds.isEmpty()) {
-        qDebug() << "购物车商品ID完整列表:" << cartProductIds;
-        qDebug() << "调用推荐控制器生成基于购物车的推荐...";
-        m_recommendationController->generateRecommendationForCart(cartProductIds);
-    } else {
-        qDebug() << "购物车商品ID列表为空，不生成推荐";
+        m_aiClient->getRecommendations(cartProductIds);
     }
 }
 
 void MainWindow::onAiSearchClicked()
 {
-    qDebug() << "MainWindow::onAiSearchClicked AI导购按钮被点击";
-    
-    if (!m_recommendationController) {
-        showErrorMessage("推荐系统未初始化");
-        return;
+    bool ok;
+    QString query = QInputDialog::getText(this, "AI Assistant", "What are you looking for?", QLineEdit::Normal, "", &ok);
+
+    if (ok && !query.isEmpty()) {
+        m_aiClient->ask(query);
     }
-    
-    if (!ui->searchLineEdit) {
-        showErrorMessage("搜索框不可用");
-        return;
-    }
-    
-    QString queryText = ui->searchLineEdit->text().trimmed();
-    if (queryText.isEmpty()) {
-        showErrorMessage("请输入搜索内容进行AI推荐");
-        return;
-    }
-    
-    qDebug() << "使用AI推荐查询:" << queryText;
-    m_recommendationController->generateRecommendationForQuery(queryText);
-    
-    // 清空搜索框
-    ui->searchLineEdit->clear();
 }
 
-void MainWindow::onRecommendationsReady(const QList<Product*>& products)
+void MainWindow::onRecommendationsReady(const QString& responseText, const QList<int>& productIds)
 {
-    qDebug() << "MainWindow::onRecommendationsReady 收到推荐结果，商品数量:" << products.size();
-    qDebug() << "推荐商品详细信息:";
-    for (int i = 0; i < products.size(); ++i) {
-        const Product* product = products.at(i);
-        if (product) {
-            qDebug() << QString("  [%1] ID:%2 名称:%3 价格:¥%4 类别:%5")
-                        .arg(i + 1)
-                        .arg(product->getProductId())
-                        .arg(product->getName())
-                        .arg(product->getPrice(), 0, 'f', 2)
-                        .arg(product->getCategory());
-        } else {
-            qWarning() << QString("  [%1] 商品指针为空!").arg(i + 1);
-        }
+    qDebug() << "AI Response: " << responseText;
+    
+    RecommendationDialog dialog(m_productManager.get(), productIds, this);
+    dialog.setRecommendationText(responseText);
+    
+    if (dialog.exec() == QDialog::Accepted) {
+        addRecommendedItemsToCart(dialog.getSelectedProductIds());
     }
-    
-    if (products.isEmpty()) {
-        qDebug() << "推荐列表为空，显示错误消息";
-        showErrorMessage("AI未找到合适的推荐商品");
-        return;
-    }
-    
-    // 直接更新左下角的推荐列表，而不是显示弹窗
-    qDebug() << "更新左下角推荐列表显示";
-    updateRecommendationDisplay(products);
-    
-    // 显示成功消息
-    showSuccessMessage(QString("AI推荐了%1个商品").arg(products.size()));
 }
+
+void MainWindow::onCartRecommendationsReady(const QList<int>& productIds)
+{
+    qDebug() << "Cart recommendations ready, updating left panel with" << productIds.size() << "products";
+    updateRecommendationDisplay(productIds);
+}
+
+void MainWindow::onUserQueryRecommendationsReady(const QString& responseText, const QList<int>& productIds)
+{
+    qDebug() << "User query recommendations ready, showing dialog with" << productIds.size() << "products";
+    qDebug() << "AI Response: " << responseText;
+    
+    RecommendationDialog dialog(m_productManager.get(), productIds, this);
+    dialog.setRecommendationText(responseText);
+    
+    if (dialog.exec() == QDialog::Accepted) {
+        addRecommendedItemsToCart(dialog.getSelectedProductIds());
+    }
+}
+
 
 void MainWindow::addRecommendedItemsToCart(const QList<int>& productIds)
 {

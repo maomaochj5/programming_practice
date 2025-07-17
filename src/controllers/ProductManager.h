@@ -19,6 +19,7 @@ public:
     QList<Product*> getAllProductsSync() const;
     Product* getProductById(int id);
     Product* getProductByName(const QString& name);
+    QList<Product*> getProductsByIds(const QList<int>& ids);
     void getProductByBarcode(const QString& barcode);
     void addProduct(Product* product);
     void updateProduct(Product* product);

@@ -71,6 +71,18 @@ Product* ProductManager::getProductById(int id)
     return m_productCache.value(id, nullptr);
 }
 
+QList<Product*> ProductManager::getProductsByIds(const QList<int>& ids)
+{
+    QList<Product*> products;
+    for (int id : ids) {
+        Product* product = getProductById(id);
+        if (product) {
+            products.append(product);
+        }
+    }
+    return products;
+}
+
 Product* ProductManager::getProductByName(const QString& name)
 {
     for (Product* product : m_productCache.values()) {

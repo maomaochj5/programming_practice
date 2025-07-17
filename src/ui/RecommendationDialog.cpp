@@ -1,33 +1,33 @@
 #include "RecommendationDialog.h"
 #include "../models/Product.h"
+#include "../controllers/ProductManager.h"
 #include <QStandardItem>
 #include <QDebug>
 #include <QCheckBox>
+#include <QLabel>
+#include <QTextEdit>
+#include <QTableView>
+#include <QPushButton>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QStandardItemModel>
 
-RecommendationDialog::RecommendationDialog(QWidget *parent)
-    : QDialog(parent)
-    , m_mainLayout(nullptr)
-    , m_titleLabel(nullptr)
-    , m_recommendationTable(nullptr)
-    , m_buttonLayout(nullptr)
-    , m_addSelectedButton(nullptr)
-    , m_addAllButton(nullptr)
-    , m_closeButton(nullptr)
-    , m_model(nullptr)
+RecommendationDialog::RecommendationDialog(ProductManager* productManager, const QList<int>& productIds, QWidget *parent)
+    : QDialog(parent),
+      m_productManager(productManager),
+      m_model(new QStandardItemModel(0, ColumnCount, this))
 {
-    setWindowTitle("AI商品推荐");
-    setModal(true);
-    resize(600, 400);
-    
-    qDebug() << "RecommendationDialog 构造函数开始";
-    qDebug() << "创建推荐对话框实例，父窗口:" << (parent ? "有效" : "空");
-    qDebug() << "设置窗口标题:" << windowTitle();
-    qDebug() << "设置窗口大小:" << size();
-    
     initializeUI();
-    setupStyleSheet();
     
-    qDebug() << "RecommendationDialog 初始化完成，窗口准备就绪";
+    QList<Product*> products;
+    for (int id : productIds) {
+        Product* p = m_productManager->getProductById(id);
+        if (p) {
+            products.append(p);
+        }
+    }
+    setRecommendations(products);
 }
 
 RecommendationDialog::~RecommendationDialog()
@@ -43,10 +43,19 @@ void RecommendationDialog::initializeUI()
     m_mainLayout->setContentsMargins(20, 20, 20, 20);
 
     // 创建标题标签
-    m_titleLabel = new QLabel("AI为您推荐以下商品：", this);
+    m_titleLabel = new QLabel("AI推荐系统", this);
     m_titleLabel->setObjectName("titleLabel");
     m_titleLabel->setAlignment(Qt::AlignCenter);
     m_mainLayout->addWidget(m_titleLabel);
+
+    // 创建AI响应文本框
+    m_responseTextEdit = new QTextEdit(this);
+    m_responseTextEdit->setObjectName("responseTextEdit");
+    m_responseTextEdit->setReadOnly(true);
+    m_responseTextEdit->setMaximumHeight(100);
+    m_responseTextEdit->setMinimumHeight(60);
+    m_responseTextEdit->setText("AI为您推荐以下商品：");
+    m_mainLayout->addWidget(m_responseTextEdit);
 
     // 创建推荐商品表格
     m_recommendationTable = new QTableView(this);
@@ -114,6 +123,15 @@ void RecommendationDialog::setupStyleSheet()
             padding: 10px;
             background-color: #ecf0f1;
             border-radius: 5px;
+        }
+        
+        QTextEdit#responseTextEdit {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 8px;
+            font-size: 14px;
+            color: #495057;
         }
         
         QTableView#recommendationTable {
@@ -246,6 +264,13 @@ void RecommendationDialog::setRecommendations(const QList<Product*>& products)
     qDebug() << "推荐商品列表设置完成";
 }
 
+void RecommendationDialog::setRecommendationText(const QString& text)
+{
+    if (m_responseTextEdit) {
+        m_responseTextEdit->setText(text);
+    }
+}
+
 void RecommendationDialog::onAddSelectedItems()
 {
     qDebug() << "RecommendationDialog::onAddSelectedItems 用户点击'添加选中商品'按钮";
@@ -261,10 +286,8 @@ void RecommendationDialog::onAddSelectedItems()
     }
     
     qDebug() << "用户选中的商品ID详细列表:" << selectedIds;
-    qDebug() << "即将发射 itemsSelectedForCart 信号，包含" << selectedIds.size() << "个商品ID";
-    
-    emit itemsSelectedForCart(selectedIds);
-    qDebug() << "itemsSelectedForCart 信号已发射，商品ID:" << selectedIds;
+    qDebug() << "选择了" << selectedIds.size() << "个商品ID";
+    qDebug() << "商品ID:" << selectedIds;
     qDebug() << "关闭推荐对话框 (accept)";
     accept(); // 关闭对话框
 }
@@ -277,10 +300,8 @@ void RecommendationDialog::onAddAllItems()
     QList<int> allIds = getAllProductIds();
     qDebug() << "获取到的所有商品ID数量:" << allIds.size();
     qDebug() << "所有商品ID详细列表:" << allIds;
-    qDebug() << "即将发射 itemsSelectedForCart 信号，包含所有" << allIds.size() << "个商品";
-    
-    emit itemsSelectedForCart(allIds);
-    qDebug() << "itemsSelectedForCart 信号已发射，包含所有商品ID:" << allIds;
+    qDebug() << "选择了所有" << allIds.size() << "个商品";
+    qDebug() << "所有商品ID:" << allIds;
     qDebug() << "关闭推荐对话框 (accept)";
     accept(); // 关闭对话框
 }

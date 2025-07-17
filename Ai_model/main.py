@@ -16,8 +16,8 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 PRODUCT_FILE = os.path.join(script_dir, "products.json")
 INDEX_FILE = os.path.join(script_dir, "products.index")
 ID_MAP_FILE = os.path.join(script_dir, "index_to_id.json")
-RETRIEVER_MODEL_NAME = './fine-tuned-retriever'
-LLM_MODEL_NAME = "microsoft/DialoGPT-medium"  # 使用更小的模型
+RETRIEVER_MODEL_NAME = os.path.join(script_dir, 'fine-tuned-retriever')
+LLM_MODEL_NAME = "Qwen/Qwen1.5-1.8B-Chat"
 
 
 def setup_environment():
@@ -56,21 +56,9 @@ class RAG_Recommender:
             self.index_to_id = json.load(f)
         with open(PRODUCT_FILE, 'r', encoding='utf-8') as f:
             self.products_db = {p['product_id']: p for p in json.load(f)}
-        
-        # 尝试初始化LLM模型，如果失败则使用检索模式
-        try:
-            self.tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_NAME)
-            self.llm_model = AutoModelForCausalLM.from_pretrained(LLM_MODEL_NAME, torch_dtype="auto", device_map="auto")
-            self.reranker = CrossEncoder('BAAI/bge-reranker-base')
-            self.use_llm = True
-            print("LLM模型加载成功，启用完整AI推荐功能")
-        except Exception as e:
-            print(f"LLM模型加载失败，使用检索模式: {e}")
-            self.use_llm = False
-            self.tokenizer = None
-            self.llm_model = None
-            self.reranker = None
-        
+        self.tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_NAME)
+        self.llm_model = AutoModelForCausalLM.from_pretrained(LLM_MODEL_NAME, torch_dtype="auto", device_map="auto")
+        self.reranker = CrossEncoder('BAAI/bge-reranker-base')
         print("--- 系统初始化完成 ---")
 
     def answer(self, user_query):
@@ -297,73 +285,58 @@ class RAG_Recommender:
 
     # 在主类中替换原有的_vector_search方法
     def handle_specific_product_query(self, user_query):
-        matched_products = self.improved_keyword_search(user_query)
-        
-        # 保存匹配的商品，供API服务器使用
-        self._last_matched_products = matched_products
-        
-        if not matched_products:
+        """处理具体商品查询 - 使用改进的向量检索"""
+
+        # 1. 使用改进的关键词搜索
+        keyword_results = self.improved_keyword_search(user_query)
+        initial_candidates = keyword_results
+
+        # 2. 如果关键词搜索结果不足，使用改进的向量搜索
+        if len(initial_candidates) < 3:
+            print("[系统]: 关键词结果不足，启动改进的向量搜索。")
+            vector_results = self._improved_vector_search(user_query)  # 使用改进的向量搜索
+
+            # 合并结果，避免重复
+            combined_results = {prod['product_id']: (prod, dist) for prod, dist in initial_candidates}
+            for product, dist in vector_results:
+                if product['product_id'] not in combined_results:
+                    combined_results[product['product_id']] = (product, dist)
+
+            initial_candidates = list(combined_results.values())
+
+            # 按距离排序
+            initial_candidates.sort(key=lambda x: x[1])
+
+        # 3. 使用改进的重排序
+        final_candidates = self._rerank_with_cross_encoder(user_query, initial_candidates[:10])
+
+        # 4. 生成回答
+        if not final_candidates:
             return self.handle_no_match_found(user_query)
 
-        candidates = self._improved_vector_search(user_query)
-        if not candidates:
-            return self.handle_no_match_found(user_query)
+        top_products = [prod for prod, score in final_candidates[:3]]
 
-        # 更新最后匹配的商品为最终候选商品
-        self._last_matched_products = [item[0] for item in candidates[:5]]
-        
-        # 如果没有LLM模型，使用简单的推荐回复
-        if not self.use_llm:
-            return self._generate_simple_recommendation(user_query, candidates[:3])
-        
-        # 使用LLM生成推荐回复
-        context_info = ""
-        for i, (product, score) in enumerate(candidates[:3]):
-            context_info += f"商品{i + 1}:\n- 名称: {product['product_name']}\n- 价格: ¥{product['price']}\n- 描述: {product['description']}\n\n"
-        
-        prompt = f"""你是一位专业的导购员。用户咨询: {user_query}
+        retrieved_context = ""
+        for i, product_info in enumerate(top_products):
+            retrieved_context += f"商品{i + 1}:\n- 名称: {product_info['product_name']}\n- 价格: ${product_info['price']}\n- 描述: {product_info['description']}\n\n"
 
-根据以下商品信息，为用户提供专业建议:
-{context_info}
+        print(f"[系统]: 最终推荐商品:")
+        for product in top_products:
+            print(f"  - {product['product_name']}")
 
-请提供:
-1. 对用户需求的理解
-2. 针对性的商品推荐及理由
-3. 使用建议或注意事项
-
-保持回答自然、专业、有帮助。"""
-
+        prompt = f"你是一个专业的电商导购助手，严格根据提供的商品信息撰写推荐语。\n\n[用户需求]\n{user_query}\n\n[可推荐的商品]\n{retrieved_context}\n[你的推荐]"
         messages = [{"role": "user", "content": prompt}]
         text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         model_inputs = self.tokenizer([text], return_tensors="pt").to(self.llm_model.device)
-
-        with torch.no_grad():
-            generated_ids = self.llm_model.generate(
-                model_inputs.input_ids,
-                max_new_tokens=256,
-                temperature=0.7,
-                do_sample=True,
-                pad_token_id=self.tokenizer.eos_token_id
-            )
-        
-        generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)]
-        response = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        
-        return response
-
-    def _generate_simple_recommendation(self, user_query, candidates):
-        """生成简单的推荐回复（不使用LLM）"""
-        if not candidates:
-            return self.handle_no_match_found(user_query)
-        
-        response = f"根据您的查询'{user_query}'，我为您推荐以下商品：\n\n"
-        
-        for i, (product, score) in enumerate(candidates):
-            response += f"{i+1}. {product['product_name']} - ¥{product['price']}\n"
-            response += f"   描述: {product['description']}\n"
-            response += f"   推荐理由: 与您的需求高度匹配\n\n"
-        
-        response += "这些商品都是根据您的需求精心挑选的，希望能满足您的购物需求！"
+        generated_ids = self.llm_model.generate(
+            model_inputs.input_ids,
+            attention_mask=model_inputs.attention_mask,
+            max_new_tokens=300,
+            temperature=0.3,
+            do_sample=True,
+            pad_token_id=self.tokenizer.eos_token_id
+        )
+        response = self.tokenizer.decode(generated_ids[0][model_inputs.input_ids.shape[1]:], skip_special_tokens=True)
         return response
 
     def improved_keyword_search(self, user_query):
@@ -696,24 +669,13 @@ class RAG_Recommender:
 
         return [(item['product'], -item['score']) for item in valid_candidates[:3]]
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     setup_environment()
-    if not os.path.exists(RETRIEVER_MODEL_NAME):
-        print(f"警告: 未找到微调后的检索器模型 '{RETRIEVER_MODEL_NAME}'。请先运行 'train_retriever.py'。")
-        exit()
-    if not os.path.exists(INDEX_FILE):
-        build_and_save_index()
-    recommender = RAG_Recommender()
-    print("\n===================================")
-    print("你好！我是您的AI导购 (优化版)，请问有什么可以帮您的？")
-    print("===================================")
-    while True:
-        user_input = input("\n你: ")
-        if user_input.lower() == '退出':
-            print("AI导购: 很高兴为您服务，再见！")
-            break
-        try:
-            ai_response = recommender.answer(user_input)
-            print(f"\nAI导购: {ai_response}")
-        except Exception as e:
-            print(f"AI导购: 抱歉，处理您的请求时出现了问题: {e}")
+    build_and_save_index()
+    # rag = RAG_Recommender()
+    # while True:
+    #     query = input("请输入您的问题: ")
+    #     if query.lower() == "exit":
+    #         break
+    #     response = rag.answer(query)
+    #     print(f"[AI导购]: {response}")

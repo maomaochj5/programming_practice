@@ -19,19 +19,76 @@
 - **Qt版本**: Qt 6.2+
 - **CMake**: 3.16+
 - **C++标准**: C++17
+- **Python**: 3.8+ (用于AI服务器)
+- **AI依赖**: torch, transformers, sentence-transformers
 
 ## 🛠️ 快速开始
 
-### 1. 克隆项目
+### 方法一：一键启动 (推荐)
+
+我们提供了一个一键启动脚本，可以自动检查依赖、编译系统并启动所有服务。
+
+#### 1. 安装依赖
+
+```bash
+# 安装Python AI依赖
+pip install torch transformers sentence-transformers requests
+
+# 安装Qt开发环境 (Ubuntu/Debian)
+sudo apt-get install qt6-base-dev cmake build-essential
+
+# 安装Qt开发环境 (macOS)
+brew install qt6 cmake
+
+# 安装Qt开发环境 (Windows)
+# 下载并安装Qt 6.2+ 和 CMake
+```
+
+#### 2. 一键启动
+
+```bash
+# 运行一键启动脚本
+python3 start_system.py
+```
+
+脚本会自动：
+- ✅ 检查系统依赖
+- 🧹 清理冲突进程
+- 🚀 启动AI服务器
+- 🔨 编译POS系统
+- 🖥️ 启动POS界面
+- 🎉 显示启动完成信息
+
+按 `Ctrl+C` 可以优雅地关闭所有服务。
+
+### 方法二：手动启动
+
+#### 1. 克隆项目
 
 ```bash
 git clone https://github.com/your-username/smart-pos-system.git
 cd smart-pos-system
 ```
 
-### 2. 编译
+#### 2. 启动AI服务器
 
 ```bash
+# 进入AI模型目录
+cd Ai_model
+
+# 安装AI依赖
+pip install -r requirements.txt
+
+# 启动AI服务器
+python start_ai_server.py
+```
+
+#### 3. 编译POS系统
+
+```bash
+# 返回项目根目录
+cd ..
+
 # 创建并进入构建目录
 mkdir build && cd build
 
@@ -42,11 +99,11 @@ cmake ..
 make -j8
 ```
 
-### 3. 运行
+#### 4. 运行POS系统
 
 ```bash
 # 在 build 目录下运行
-./SmartPOS
+./pos_system
 ```
 
 ## 📁 项目结构
@@ -54,6 +111,10 @@ make -j8
 ```
 smart-pos-system/
 ├── .github/          # GitHub Actions CI/CD 配置
+├── Ai_model/         # AI推荐模型和服务器
+│   ├── api_server.py
+│   ├── start_ai_server.py
+│   └── fine-tuned-retriever/
 ├── build/            # 编译产物目录 (自动生成)
 ├── resources/        # 应用资源 (图标, 声音等)
 ├── src/              # 源代码
@@ -64,12 +125,22 @@ smart-pos-system/
 │   ├── models/
 │   └── ui/
 ├── tests/            # 测试代码 (单元测试/集成测试)
+├── start_system.py   # 一键启动脚本
 ├── .gitignore
 ├── CMakeLists.txt    # 项目主构建文件
 ├── CONTRIBUTING.md   # 贡献指南
 ├── LICENSE           # MIT 许可证
 └── README.md         # 项目说明文档
 ```
+
+## 🤖 AI推荐系统
+
+系统集成了基于深度学习的商品推荐功能：
+
+- **智能推荐**: 根据购物车内容推荐相关商品
+- **语义理解**: 使用fine-tuned的sentence-transformers模型
+- **实时响应**: 推荐结果实时更新
+- **本地部署**: AI模型完全本地化，保护数据隐私
 
 ## 🏗️ 核心技术与架构演进
 
@@ -79,6 +150,32 @@ smart-pos-system/
 - **数据库层 (`database`)**: `DatabaseManager` 使用 `QtConcurrent::run` 将所有SQL查询移至工作线程，并通过信号 (`productsRead`, `productSaved` 等) 将结果返回给主线程。
 - **控制器层 (`controllers`)**: `ProductManager` 和 `CheckoutController` 作为模型和UI之间的桥梁。它们监听来自数据库层的信号，处理数据，并发出自己的信号 (`allProductsChanged`, `saleUpdated`) 来通知UI层。
 - **视图层 (`ui`)**: `MainWindow` 和其他对话框完全通过信号和槽与控制器层交互。所有UI更新都是由信号驱动的，实现了高度解耦和响应式设计。
+
+## 🐛 故障排除
+
+### 常见问题
+
+1. **AI服务器启动失败**
+   - 检查端口5001是否被占用
+   - 确认Python依赖已正确安装
+   - 查看AI模型文件是否存在
+
+2. **编译失败**
+   - 确认Qt6已正确安装
+   - 检查CMake版本是否满足要求
+   - 清理build目录重新编译
+
+3. **POS系统无法启动**
+   - 确认AI服务器正在运行
+   - 检查网络连接
+   - 查看错误日志
+
+### 获取帮助
+
+如果遇到问题，请：
+1. 查看控制台输出的错误信息
+2. 检查系统依赖是否完整
+3. 尝试重新启动系统
 
 ## 许可证
 
