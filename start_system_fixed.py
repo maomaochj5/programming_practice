@@ -31,10 +31,10 @@ def start_ai_server():
     for attempt in range(max_attempts):
         try:
             # 尝试连接AI服务器
-            response = requests.get("http://127.0.0.1:5001/ask", 
-                                  json={"query": "test"}, 
-                                  timeout=2)
-            if response.status_code in [200, 405]:  # 200正常, 405方法不允许但服务器响应
+            response = requests.post("http://127.0.0.1:5001/ask", 
+                                   json={"query": "test"}, 
+                                   timeout=2)
+            if response.status_code == 200:  # 200正常响应
                 print("✅ AI 服务器启动成功!")
                 return ai_process
         except requests.exceptions.RequestException:

@@ -98,5 +98,6 @@ if(BUILD_TESTING)
     target_link_libraries(test_gui_interface PRIVATE Qt6::Test Qt6::Widgets SmartPOS)
 endif()
 
-add_executable(import_products import_products.cpp)
-target_link_libraries(import_products PRIVATE Qt6::Core Qt6::Sql)
+# import_products.cpp is missing, so comment out or remove this target to fix the error.
+# add_executable(import_products import_products.cpp)
+# target_link_libraries(import_products PRIVATE Qt6::Core Qt6::Sql)
