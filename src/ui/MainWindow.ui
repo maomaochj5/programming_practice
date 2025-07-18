@@ -13,6 +13,494 @@
   <property name="windowTitle">
    <string>智能超市收银系统</string>
   </property>
+  <property name="styleSheet">
+   <string>QMainWindow {
+    background-color: #f5f5f5;
+    color: #333333;
+    font-family: "Microsoft YaHei UI", Arial, sans-serif;
+}
+
+QGroupBox {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-top: 12px;
+    padding-top: 8px;
+    font-weight: 500;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 4px 12px;
+    background-color: #2563eb;
+    color: white;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+QPushButton {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-weight: 500;
+    font-size: 14px;
+    min-height: 32px;
+}
+
+QPushButton:hover {
+    background-color: #2563eb;
+}
+
+QPushButton:pressed {
+    background-color: #1d4ed8;
+}
+
+QPushButton:disabled {
+    background-color: #9ca3af;
+    color: #6b7280;
+}
+
+QLineEdit {
+    background-color: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    min-height: 16px;
+    color: #374151;
+}
+
+QLineEdit:focus {
+    border-color: #3b82f6;
+}
+
+QLineEdit::placeholder {
+    color: #9ca3af;
+}
+
+QListWidget {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 4px;
+    font-size: 14px;
+    color: #374151;
+}
+
+QListWidget::item {
+    padding: 8px;
+    border-bottom: 1px solid #f3f4f6;
+    border-radius: 4px;
+}
+
+QListWidget::item:selected {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+QListWidget::item:hover {
+    background-color: #f3f4f6;
+}
+
+QTableView {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    gridline-color: #f3f4f6;
+    font-size: 14px;
+}
+
+QTableView::item {
+    padding: 8px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+QTableView::item:selected {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+QLabel {
+    color: #374151;
+    font-size: 14px;
+}
+
+QProgressBar {
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+QProgressBar::chunk {
+    background-color: #10b981;
+    border-radius: 4px;
+}
+
+QSplitter::handle {
+    background-color: #e5e7eb;
+    width: 2px;
+    height: 2px;
+}
+
+QSplitter::handle:hover {
+    background-color: #9ca3af;
+}
+
+QWidget#leftPanel, QWidget#centerPanel, QWidget#rightPanel {
+    background-color: transparent;
+}
+
+QWidget#centralWidget {
+    background-color: #f5f5f5;
+}
+
+QMenuBar {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 4px 0px;
+    font-size: 14px;
+    color: #374151;
+}
+
+QMenuBar::item {
+    background-color: transparent;
+    padding: 8px 16px;
+    border-radius: 4px;
+    margin: 0px 2px;
+}
+
+QMenuBar::item:selected {
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+QMenuBar::item:pressed {
+    background-color: #e5e7eb;
+}
+
+QMenu {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 8px 0px;
+    font-size: 14px;
+    color: #374151;
+}
+
+QMenu::item {
+    background-color: transparent;
+    padding: 8px 20px;
+    margin: 2px 8px;
+    border-radius: 4px;
+}
+
+QMenu::item:selected {
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+QMenu::item:pressed {
+    background-color: #e5e7eb;
+}
+
+QMenu::separator {
+    height: 1px;
+    background-color: #e5e7eb;
+    margin: 4px 12px;
+}
+
+QToolBar {
+    background-color: #ffffff;
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 4px;
+    spacing: 2px;
+}
+
+QToolBar::handle {
+    background-color: #e5e7eb;
+    width: 2px;
+    height: 2px;
+    border-radius: 1px;
+}
+
+QToolBar QToolButton {
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+    padding: 6px;
+    margin: 1px;
+    color: #374151;
+}
+
+QToolBar QToolButton:hover {
+    background-color: #f3f4f6;
+}
+
+QToolBar QToolButton:pressed {
+    background-color: #e5e7eb;
+}
+
+QToolBar QToolButton:checked {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+QStatusBar {
+    background-color: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    color: #6b7280;
+    font-size: 13px;
+    padding: 4px 8px;
+}
+
+QHeaderView {
+    background-color: #f9fafb;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    color: #374151;
+}
+
+QHeaderView::section {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-top: none;
+    border-left: none;
+    padding: 8px 12px;
+    font-weight: 600;
+    color: #374151;
+}
+
+QHeaderView::section:horizontal {
+    border-bottom: 2px solid #3b82f6;
+}
+
+QHeaderView::section:vertical {
+    border-right: 2px solid #3b82f6;
+}
+
+QHeaderView::section:hover {
+    background-color: #f3f4f6;
+}
+
+QHeaderView::section:pressed {
+    background-color: #e5e7eb;
+}
+
+QScrollBar:vertical {
+    border: none;
+    background: #f9fafb;
+    width: 14px;
+    border-radius: 7px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #d1d5db;
+    border-radius: 7px;
+    min-height: 20px;
+    margin: 2px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #9ca3af;
+}
+
+QScrollBar::handle:vertical:pressed {
+    background: #6b7280;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    border: none;
+    background: none;
+    height: 0px;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+QScrollBar:horizontal {
+    border: none;
+    background: #f9fafb;
+    height: 14px;
+    border-radius: 7px;
+    margin: 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #d1d5db;
+    border-radius: 7px;
+    min-width: 20px;
+    margin: 2px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #9ca3af;
+}
+
+QScrollBar::handle:horizontal:pressed {
+    background: #6b7280;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    border: none;
+    background: none;
+    width: 0px;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    background: none;
+}
+
+QSpinBox, QDoubleSpinBox {
+    background-color: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    min-height: 16px;
+    color: #374151;
+}
+
+QSpinBox:focus, QDoubleSpinBox:focus {
+    border-color: #3b82f6;
+}
+
+QSpinBox::up-button, QDoubleSpinBox::up-button {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 3px;
+    width: 16px;
+    margin: 2px;
+}
+
+QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover {
+    background-color: #f3f4f6;
+}
+
+QSpinBox::up-button:pressed, QDoubleSpinBox::up-button:pressed {
+    background-color: #e5e7eb;
+}
+
+QSpinBox::down-button, QDoubleSpinBox::down-button {
+    background-color: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 3px;
+    width: 16px;
+    margin: 2px;
+}
+
+QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {
+    background-color: #f3f4f6;
+}
+
+QSpinBox::down-button:pressed, QDoubleSpinBox::down-button:pressed {
+    background-color: #e5e7eb;
+}
+
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+    image: none;
+    border: 2px solid #6b7280;
+    border-radius: 1px;
+    width: 4px;
+    height: 4px;
+}
+
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+    image: none;
+    border: 2px solid #6b7280;
+    border-radius: 1px;
+    width: 4px;
+    height: 4px;
+}
+
+QComboBox {
+    background-color: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    min-height: 16px;
+    color: #374151;
+}
+
+QComboBox:focus {
+    border-color: #3b82f6;
+}
+
+QComboBox::drop-down {
+    border: none;
+    background-color: #f9fafb;
+    border-radius: 4px;
+    width: 20px;
+    margin: 2px;
+}
+
+QComboBox::drop-down:hover {
+    background-color: #f3f4f6;
+}
+
+QComboBox::drop-down:pressed {
+    background-color: #e5e7eb;
+}
+
+QComboBox::down-arrow {
+    image: none;
+    border: 2px solid #6b7280;
+    border-radius: 1px;
+    width: 6px;
+    height: 6px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 4px;
+    font-size: 14px;
+    color: #374151;
+    selection-background-color: #dbeafe;
+    selection-color: #1e40af;
+}
+
+QComboBox QAbstractItemView::item {
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin: 1px;
+}
+
+QComboBox QAbstractItemView::item:hover {
+    background-color: #f8fafc;
+}
+
+QComboBox QAbstractItemView::item:selected {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+QTextEdit {
+    background-color: #ffffff;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #374151;
+    selection-background-color: #dbeafe;
+    selection-color: #1e40af;
+}
+
+QTextEdit:focus {
+    border-color: #3b82f6;
+}</string>
+  </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
@@ -41,6 +529,19 @@
               <widget class="QPushButton" name="searchButton">
                <property name="text">
                 <string>搜索</string>
+               </property>
+               <property name="styleSheet">
+                <string>QPushButton {
+    background-color: #059669;
+}
+
+QPushButton:hover {
+    background-color: #047857;
+}
+
+QPushButton:pressed {
+    background-color: #065f46;
+}</string>
                </property>
               </widget>
              </item>
@@ -97,7 +598,13 @@
               </size>
              </property>
              <property name="styleSheet">
-              <string>QLabel { border: 2px dashed #ccc; background-color: #f9f9f9; }</string>
+              <string>QLabel { 
+    border: 2px dashed #cbd5e1; 
+    background-color: #f8fafc; 
+    color: #64748b;
+    font-size: 13px;
+    border-radius: 6px;
+}</string>
              </property>
              <property name="scaledContents">
               <bool>true</bool>
@@ -118,6 +625,16 @@
             <widget class="QLabel" name="scanStatusLabel">
              <property name="text">
               <string>扫描状态: 就绪</string>
+             </property>
+             <property name="styleSheet">
+              <string>QLabel {
+    background-color: #f0f9ff;
+    border: 1px solid #0ea5e9;
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: #0c4a6e;
+    font-weight: 500;
+}</string>
              </property>
             </widget>
            </item>
@@ -144,6 +661,19 @@
             <widget class="QPushButton" name="refreshRecommendationButton">
              <property name="text">
               <string>刷新推荐</string>
+             </property>
+             <property name="styleSheet">
+              <string>QPushButton {
+    background-color: #7c3aed;
+}
+
+QPushButton:hover {
+    background-color: #6d28d9;
+}
+
+QPushButton:pressed {
+    background-color: #5b21b6;
+}</string>
              </property>
             </widget>
            </item>
@@ -263,6 +793,17 @@
              <property name="text">
               <string>¥0.00</string>
              </property>
+             <property name="styleSheet">
+              <string>QLabel {
+    font-size: 18px;
+    font-weight: 600;
+    color: #dc2626;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 4px;
+    padding: 4px 8px;
+}</string>
+             </property>
             </widget>
            </item>
            <item row="3" column="0" colspan="2">
@@ -271,6 +812,19 @@
               <widget class="QPushButton" name="discountButton">
                <property name="text">
                 <string>折扣</string>
+               </property>
+               <property name="styleSheet">
+                <string>QPushButton {
+    background-color: #f59e0b;
+}
+
+QPushButton:hover {
+    background-color: #d97706;
+}
+
+QPushButton:pressed {
+    background-color: #b45309;
+}</string>
                </property>
               </widget>
              </item>
@@ -291,6 +845,22 @@
               <widget class="QPushButton" name="checkoutButton">
                <property name="text">
                 <string>结账</string>
+               </property>
+               <property name="styleSheet">
+                <string>QPushButton {
+    background-color: #dc2626;
+    font-size: 16px;
+    font-weight: 600;
+    min-height: 40px;
+}
+
+QPushButton:hover {
+    background-color: #b91c1c;
+}
+
+QPushButton:pressed {
+    background-color: #991b1b;
+}</string>
                </property>
               </widget>
              </item>
@@ -385,6 +955,17 @@
           <property name="alignment">
            <set>Qt::AlignCenter</set>
           </property>
+          <property name="styleSheet">
+           <string>QLabel {
+    background-color: #f0fdf4;
+    border: 1px solid #16a34a;
+    border-radius: 6px;
+    padding: 8px;
+    color: #15803d;
+    font-weight: 500;
+    font-size: 16px;
+}</string>
+          </property>
          </widget>
         </item>
         <item>
@@ -420,7 +1001,6 @@
      <string>文件</string>
     </property>
     <addaction name="actionNewSale"/>
-    <addaction name="actionSaveSale"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -429,15 +1009,7 @@
      <string>商品</string>
     </property>
     <addaction name="actionManageProducts"/>
-    <addaction name="separator"/>
-    <addaction name="actionImport"/>
-    <addaction name="actionExport"/>
-   </widget>
-   <widget class="QMenu" name="menuHelp">
-    <property name="title">
-     <string>帮助</string>
-    </property>
-    <addaction name="actionAbout"/>
+    <addaction name="actionRefreshProducts"/>
    </widget>
    <widget class="QMenu" name="menuTransaction">
     <property name="title">
@@ -448,11 +1020,10 @@
    <addaction name="menuFile"/>
    <addaction name="menuProduct"/>
    <addaction name="menuTransaction"/>
-   <addaction name="menuHelp"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <property name="windowTitle">
-    <string>mainToolBar</string>
+    <string>工具栏</string>
    </property>
    <attribute name="toolBarArea">
     <enum>TopToolBarArea</enum>
@@ -463,7 +1034,6 @@
    <addaction name="actionNewSale"/>
    <addaction name="separator"/>
    <addaction name="actionManageProducts"/>
-   <addaction name="separator"/>
    <addaction name="actionRefreshProducts"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -475,24 +1045,9 @@
     <string>Ctrl+N</string>
    </property>
   </action>
-  <action name="actionSaveSale">
-   <property name="text">
-    <string>保存销售</string>
-   </property>
-  </action>
   <action name="actionManageProducts">
    <property name="text">
     <string>管理商品</string>
-   </property>
-  </action>
-  <action name="actionImport">
-   <property name="text">
-    <string>导入商品</string>
-   </property>
-  </action>
-  <action name="actionExport">
-   <property name="text">
-    <string>导出商品</string>
    </property>
   </action>
   <action name="actionPrintReceipt">
@@ -514,11 +1069,6 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
-   </property>
-  </action>
-  <action name="actionAbout">
-   <property name="text">
-    <string>关于</string>
    </property>
   </action>
  </widget>

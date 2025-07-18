@@ -26,13 +26,68 @@ void ProductManagementDialog::setupUi()
     setWindowTitle("商品管理");
     setMinimumSize(600, 400);
 
+    // 设置对话框样式
+    setStyleSheet(
+        "QDialog {"
+        "    background-color: #f5f5f5;"
+        "    color: #333333;"
+        "    font-family: 'Microsoft YaHei UI', Arial, sans-serif;"
+        "}"
+        "QListWidget {"
+        "    background-color: #ffffff;"
+        "    border: 1px solid #e5e7eb;"
+        "    border-radius: 8px;"
+        "    padding: 4px;"
+        "    font-size: 14px;"
+        "}"
+        "QListWidget::item {"
+        "    padding: 12px 8px;"
+        "    border-bottom: 1px solid #f3f4f6;"
+        "    border-radius: 4px;"
+        "    margin: 2px;"
+        "}"
+        "QListWidget::item:selected {"
+        "    background-color: #dbeafe;"
+        "    color: #1e40af;"
+        "}"
+        "QListWidget::item:hover {"
+        "    background-color: #f8fafc;"
+        "}"
+        "QPushButton {"
+        "    background-color: #3b82f6;"
+        "    color: white;"
+        "    border: none;"
+        "    border-radius: 6px;"
+        "    padding: 8px 16px;"
+        "    font-weight: 500;"
+        "    font-size: 14px;"
+        "    min-height: 32px;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #2563eb;"
+        "}"
+        "QPushButton:pressed {"
+        "    background-color: #1d4ed8;"
+        "}"
+        "QPushButton:disabled {"
+        "    background-color: #9ca3af;"
+        "    color: #6b7280;"
+        "}"
+    );
+
     m_productListWidget = new QListWidget(this);
     m_addButton = new QPushButton("添加商品", this);
     m_editButton = new QPushButton("编辑商品", this);
     m_deleteButton = new QPushButton("删除商品", this);
     m_closeButton = new QPushButton("关闭", this);
 
+    // 设置特定按钮样式
+    m_addButton->setStyleSheet("QPushButton { background-color: #059669; } QPushButton:hover { background-color: #047857; }");
+    m_deleteButton->setStyleSheet("QPushButton { background-color: #dc2626; } QPushButton:hover { background-color: #b91c1c; }");
+    m_closeButton->setStyleSheet("QPushButton { background-color: #6b7280; } QPushButton:hover { background-color: #4b5563; }");
+
     QHBoxLayout* buttonLayout = new QHBoxLayout;
+    buttonLayout->setSpacing(12);
     buttonLayout->addWidget(m_addButton);
     buttonLayout->addWidget(m_editButton);
     buttonLayout->addWidget(m_deleteButton);
@@ -40,6 +95,8 @@ void ProductManagementDialog::setupUi()
     buttonLayout->addWidget(m_closeButton);
 
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    mainLayout->setSpacing(16);
+    mainLayout->setContentsMargins(20, 20, 20, 20);
     mainLayout->addWidget(m_productListWidget);
     mainLayout->addLayout(buttonLayout);
 

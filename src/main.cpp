@@ -25,22 +25,55 @@ int main(int argc, char *argv[])
     // 设置现代化样式
     app.setStyle(QStyleFactory::create("Fusion"));
     
-    // 设置深色主题
-    QPalette darkPalette;
-    darkPalette.setColor(QPalette::Window, QColor(53, 53, 53));
-    darkPalette.setColor(QPalette::WindowText, Qt::white);
-    darkPalette.setColor(QPalette::Base, QColor(25, 25, 25));
-    darkPalette.setColor(QPalette::AlternateBase, QColor(53, 53, 53));
-    darkPalette.setColor(QPalette::ToolTipBase, Qt::white);
-    darkPalette.setColor(QPalette::ToolTipText, Qt::white);
-    darkPalette.setColor(QPalette::Text, Qt::white);
-    darkPalette.setColor(QPalette::Button, QColor(53, 53, 53));
-    darkPalette.setColor(QPalette::ButtonText, Qt::white);
-    darkPalette.setColor(QPalette::BrightText, Qt::red);
-    darkPalette.setColor(QPalette::Link, QColor(42, 130, 218));
-    darkPalette.setColor(QPalette::Highlight, QColor(42, 130, 218));
-    darkPalette.setColor(QPalette::HighlightedText, Qt::black);
-    app.setPalette(darkPalette);
+    // 设置浅色主题
+    QPalette lightPalette;
+    lightPalette.setColor(QPalette::Window, QColor(245, 245, 245));
+    lightPalette.setColor(QPalette::WindowText, QColor(51, 51, 51));
+    lightPalette.setColor(QPalette::Base, QColor(255, 255, 255));
+    lightPalette.setColor(QPalette::AlternateBase, QColor(249, 249, 249));
+    lightPalette.setColor(QPalette::ToolTipBase, QColor(255, 255, 255));
+    lightPalette.setColor(QPalette::ToolTipText, QColor(51, 51, 51));
+    lightPalette.setColor(QPalette::Text, QColor(51, 51, 51));
+    lightPalette.setColor(QPalette::Button, QColor(255, 255, 255));
+    lightPalette.setColor(QPalette::ButtonText, QColor(51, 51, 51));
+    lightPalette.setColor(QPalette::BrightText, QColor(220, 38, 38));
+    lightPalette.setColor(QPalette::Link, QColor(59, 130, 246));
+    lightPalette.setColor(QPalette::Highlight, QColor(59, 130, 246));
+    lightPalette.setColor(QPalette::HighlightedText, QColor(255, 255, 255));
+    app.setPalette(lightPalette);
+    
+    // 设置全局样式表，确保所有对话框都使用正确的样式
+    app.setStyleSheet(
+        "QMessageBox, QDialog {"
+        "    background-color: #f5f5f5;"
+        "    color: #333333;"
+        "    font-family: 'Microsoft YaHei UI', Arial, sans-serif;"
+        "}"
+        "QMessageBox QPushButton {"
+        "    background-color: #3b82f6;"
+        "    color: white;"
+        "    border: none;"
+        "    border-radius: 6px;"
+        "    padding: 8px 16px;"
+        "    font-weight: 500;"
+        "    font-size: 14px;"
+        "    min-height: 32px;"
+        "    min-width: 80px;"
+        "}"
+        "QMessageBox QPushButton:hover {"
+        "    background-color: #2563eb;"
+        "}"
+        "QMessageBox QPushButton:pressed {"
+        "    background-color: #1d4ed8;"
+        "}"
+        "QMessageBox QLabel {"
+        "    color: #374151;"
+        "    font-size: 14px;"
+        "}"
+        "QMessageBox {"
+        "    messagebox-text-interaction-flags: 5;"
+        "}"
+    );
     
     // 初始化数据库
     DatabaseManager& dbManager = DatabaseManager::getInstance();

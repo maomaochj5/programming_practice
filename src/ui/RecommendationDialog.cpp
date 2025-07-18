@@ -19,6 +19,7 @@ RecommendationDialog::RecommendationDialog(ProductManager* productManager, const
       m_model(new QStandardItemModel(0, ColumnCount, this))
 {
     initializeUI();
+    setupStyleSheet();
     
     QList<Product*> products;
     for (int id : productIds) {
@@ -114,79 +115,116 @@ void RecommendationDialog::setupStyleSheet()
     setStyleSheet(R"(
         QDialog {
             background-color: #f5f5f5;
+            color: #333333;
+            font-family: 'Microsoft YaHei UI', Arial, sans-serif;
         }
         
         QLabel#titleLabel {
-            font-size: 16px;
-            font-weight: bold;
-            color: #2c3e50;
-            padding: 10px;
-            background-color: #ecf0f1;
-            border-radius: 5px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            padding: 12px 20px;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 8px;
         }
         
         QTextEdit#responseTextEdit {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            padding: 8px;
+            background-color: #ffffff;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
             font-size: 14px;
-            color: #495057;
+            color: #374151;
+            font-family: 'Microsoft YaHei UI', Arial, sans-serif;
+        }
+        
+        QTextEdit#responseTextEdit:focus {
+            border-color: #3b82f6;
         }
         
         QTableView#recommendationTable {
-            background-color: white;
-            border: 1px solid #bdc3c7;
-            border-radius: 5px;
-            gridline-color: #ecf0f1;
-            selection-background-color: #3498db;
-            selection-color: white;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            gridline-color: #f3f4f6;
+            selection-background-color: #dbeafe;
+            selection-color: #1e40af;
+            font-size: 14px;
         }
         
         QTableView#recommendationTable::item {
-            padding: 8px;
-            border-bottom: 1px solid #ecf0f1;
+            padding: 12px 8px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        QTableView#recommendationTable::item:selected {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+        
+        QTableView#recommendationTable::item:hover {
+            background-color: #f8fafc;
         }
         
         QHeaderView::section {
-            background-color: #34495e;
-            color: white;
-            padding: 8px;
-            border: none;
-            font-weight: bold;
+            background-color: #f9fafb;
+            color: #374151;
+            padding: 12px 8px;
+            border: 1px solid #e5e7eb;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        QHeaderView::section:horizontal {
+            border-top: none;
+            border-left: none;
+            border-right: 1px solid #e5e7eb;
+            border-bottom: 2px solid #3b82f6;
         }
         
         QPushButton {
-            background-color: #3498db;
+            background-color: #3b82f6;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             padding: 8px 16px;
-            font-weight: bold;
+            font-weight: 500;
+            font-size: 14px;
+            min-height: 32px;
         }
         
         QPushButton:hover {
-            background-color: #2980b9;
+            background-color: #2563eb;
         }
         
         QPushButton:pressed {
-            background-color: #21618c;
+            background-color: #1d4ed8;
         }
         
         QPushButton#closeButton {
-            background-color: #95a5a6;
+            background-color: #6b7280;
         }
         
         QPushButton#closeButton:hover {
-            background-color: #7f8c8d;
+            background-color: #4b5563;
         }
         
         QPushButton#addAllButton {
-            background-color: #27ae60;
+            background-color: #059669;
         }
         
         QPushButton#addAllButton:hover {
-            background-color: #229954;
+            background-color: #047857;
+        }
+        
+        QPushButton#addSelectedButton {
+            background-color: #7c3aed;
+        }
+        
+        QPushButton#addSelectedButton:hover {
+            background-color: #6d28d9;
         }
     )");
 }

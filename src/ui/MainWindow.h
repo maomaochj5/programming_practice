@@ -123,7 +123,6 @@ private slots:
     // 系统槽函数
     void onShowStatistics();
     void onShowSettings();
-    void onAbout();
     void updateTime();
     void onSaleCompleted(Sale* sale);
 
@@ -153,13 +152,6 @@ private:
      * @brief 设置样式表
      */
     void setupStyleSheet();
-    
-    /**
-     * @brief 创建菜单栏
-     */
-    void createMenuBar();
-    
-
     
     /**
      * @brief 更新购物车显示

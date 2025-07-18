@@ -145,8 +145,7 @@ void MainWindow::initializeUI()
         ui->searchInputLayout->addWidget(m_aiSearchButton);
     }
 
-    // 创建菜单栏
-    createMenuBar();
+    // 菜单栏由UI文件自动生成
     
     // 延迟调用这些函数，确保 UI 完全初始化
     QTimer::singleShot(0, this, [this]() {
@@ -163,66 +162,7 @@ void MainWindow::initializeUI()
     qDebug() << "MainWindow::initializeUI 完成";
 }
 
-void MainWindow::createMenuBar()
-{
-    QMenuBar* menuBar = this->menuBar();
-    if (!menuBar) {
-        qWarning() << "无法创建菜单栏";
-        return;
-    }
-    
-    // 文件菜单
-    QMenu* fileMenu = menuBar->addMenu("文件(&F)");
-    QAction* newSaleAction = fileMenu->addAction("新建销售(&N)");
-    QAction* exitAction = fileMenu->addAction("退出(&X)");
-    fileMenu->addSeparator();
-    QAction* importProductsAction = fileMenu->addAction("导入商品(&I)");
-    QAction* exportProductsAction = fileMenu->addAction("导出商品(&E)");
-    
-    // 销售菜单
-    QMenu* saleMenu = menuBar->addMenu("销售(&S)");
-    QAction* processPaymentAction = saleMenu->addAction("处理支付(&P)");
-    QAction* clearCartAction = saleMenu->addAction("清空购物车(&C)");
-    QAction* printReceiptAction = saleMenu->addAction("打印小票(&R)");
-    
-    // 商品菜单
-    QMenu* productMenu = menuBar->addMenu("商品(&P)");
-    QAction* manageProductsAction = productMenu->addAction("商品管理(&M)");
-    QAction* searchProductAction = productMenu->addAction("搜索商品(&S)");
-    
-    // 报告菜单
-    QMenu* reportMenu = menuBar->addMenu("报告(&R)");
-    QAction* salesReportAction = reportMenu->addAction("销售报告(&S)");
-    QAction* inventoryReportAction = reportMenu->addAction("库存报告(&I)");
-    
-    // 工具菜单
-    QMenu* toolsMenu = menuBar->addMenu("工具(&T)");
-    QAction* aiRecommendationAction = toolsMenu->addAction("AI推荐(&A)");
-    QAction* barcodeScanAction = toolsMenu->addAction("条码扫描(&B)");
-    QAction* imageScanAction = toolsMenu->addAction("图片扫描(&I)");
-    
-    // 帮助菜单
-    QMenu* helpMenu = menuBar->addMenu("帮助(&H)");
-    QAction* aboutAction = helpMenu->addAction("关于(&A)");
-    QAction* helpAction = helpMenu->addAction("帮助(&H)");
-    
-    // 连接菜单动作
-    connect(newSaleAction, &QAction::triggered, this, &MainWindow::onNewSale);
-    connect(exitAction, &QAction::triggered, this, &QWidget::close);
-    connect(processPaymentAction, &QAction::triggered, this, &MainWindow::onProcessPayment);
-    connect(clearCartAction, &QAction::triggered, this, &MainWindow::onClearSale);
-    connect(printReceiptAction, &QAction::triggered, this, &MainWindow::onPrintReceipt);
-    connect(manageProductsAction, &QAction::triggered, this, &MainWindow::onManageProducts);
-    connect(searchProductAction, &QAction::triggered, this, &MainWindow::onSearchProduct);
-    connect(salesReportAction, &QAction::triggered, this, &MainWindow::onShowStatistics);
-    connect(aiRecommendationAction, &QAction::triggered, this, &MainWindow::onAiSearchClicked);
-    connect(barcodeScanAction, &QAction::triggered, this, &MainWindow::onSelectImage);
-    connect(imageScanAction, &QAction::triggered, this, &MainWindow::onSelectImage);
-    connect(aboutAction, &QAction::triggered, this, &MainWindow::onAbout);
-    connect(helpAction, &QAction::triggered, this, &MainWindow::onAbout);
-    
-    qDebug() << "菜单栏创建完成";
-}
+
 
 void MainWindow::setupConnections()
 {
@@ -269,7 +209,6 @@ void MainWindow::setupConnections()
     if (ui->actionManageProducts) connect(ui->actionManageProducts, &QAction::triggered, this, &MainWindow::onManageProducts);
     if (ui->actionRefreshProducts) connect(ui->actionRefreshProducts, &QAction::triggered, this, &MainWindow::onRefreshProducts);
     if (ui->actionExit) connect(ui->actionExit, &QAction::triggered, this, &QWidget::close);
-    if (ui->actionAbout) connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::onAbout);
 }
 
 
@@ -815,10 +754,6 @@ void MainWindow::onShowStatistics()
 void MainWindow::onShowSettings()
 {
     QMessageBox::information(this, "系统设置", "此功能正在开发中。");
-}
-
-void MainWindow::onAbout() {
-    QMessageBox::about(this, "关于", "智能超市收银系统 v1.0\n基于C++/Qt开发\n集成条码识别和AI推荐功能");
 }
 
 void MainWindow::onSaleCompleted(Sale* sale)
