@@ -4,6 +4,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QPixmap>
+#include <QMouseEvent>
 
 RecommendationItemWidget::RecommendationItemWidget(const Product* product, QWidget *parent)
     : QWidget(parent), m_product(product)
@@ -56,4 +57,12 @@ void RecommendationItemWidget::setupUi()
         emit addToCartClicked(m_product->getProductId());
     });
     layout->addWidget(m_addButton);
+}
+
+void RecommendationItemWidget::mousePressEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton && m_product) {
+        emit productSelected(m_product->getProductId());
+    }
+    QWidget::mousePressEvent(event);
 } 

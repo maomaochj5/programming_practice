@@ -14,8 +14,12 @@ class RecommendationItemWidget : public QWidget
 public:
     explicit RecommendationItemWidget(const Product* product, QWidget *parent = nullptr);
 
+protected:
+    void mousePressEvent(QMouseEvent* event) override;
+
 signals:
     void addToCartClicked(int productId);
+    void productSelected(int productId);
 
 private:
     void setupUi();

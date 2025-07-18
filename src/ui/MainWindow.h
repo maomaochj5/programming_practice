@@ -103,6 +103,7 @@ private slots:
     void onRecommendationsUpdated(const QList<int>& productIds);
     void onRefreshRecommendations();
     void onRecommendationAddToCart(int productId);
+    void onRecommendationProductSelected(int productId);
     
     // 新的推荐控制器槽函数
     void onCartUpdated();
@@ -199,8 +200,9 @@ private:
     /**
      * @brief 显示成功消息
      * @param message 成功消息
+     * @param timeout 消息停留时间（毫秒），默认3000毫秒
      */
-    void showSuccessMessage(const QString& message);
+    void showSuccessMessage(const QString& message, int timeout = 3000);
 
 private:
     // UI

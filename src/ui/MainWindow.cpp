@@ -490,6 +490,36 @@ void MainWindow::onRecommendationAddToCart(int productId)
     }
 }
 
+void MainWindow::onRecommendationProductSelected(int productId)
+{
+    qDebug() << "推荐商品被选中，商品ID:" << productId;
+    
+    if (!ui->productListWidget) {
+        qDebug() << "商品列表控件为空";
+        return;
+    }
+    
+    // 在上方的商品列表中查找并选中对应的商品
+    for (int i = 0; i < ui->productListWidget->count(); ++i) {
+        QListWidgetItem* item = ui->productListWidget->item(i);
+        if (item && item->data(Qt::UserRole).toInt() == productId) {
+            ui->productListWidget->setCurrentItem(item);
+            ui->productListWidget->scrollToItem(item);
+            
+            // 获取商品名称用于显示消息
+            auto product = m_productManager->getProductById(productId);
+            if (product) {
+                showSuccessMessage(QString("已选中商品: %1").arg(product->getName()));
+            }
+            
+            qDebug() << "成功在商品列表中选中商品:" << productId;
+            return;
+        }
+    }
+    
+    qDebug() << "未在商品列表中找到商品ID:" << productId;
+}
+
 void MainWindow::onRecommendationSelected()
 {
     // This function is required to exist to fix a linker error,
@@ -631,12 +661,12 @@ void MainWindow::showErrorMessage(const QString& message)
     // QMessageBox::warning(this, "错误", message);
 }
 
-void MainWindow::showSuccessMessage(const QString& message)
+void MainWindow::showSuccessMessage(const QString& message, int timeout)
 {
     qDebug() << "MainWindow::showSuccessMessage called:" << message;
     if (ui->statusbar) {
         ui->statusbar->setStyleSheet("background-color: #28a745; color: white; font-weight: bold;");
-        ui->statusbar->showMessage(message, 3000);
+        ui->statusbar->showMessage(message, timeout);
     }
 }
 
@@ -745,6 +775,7 @@ void MainWindow::updateRecommendationDisplay(const QList<int>& productIds)
             ui->recommendationListWidget->setItemWidget(listItem, itemWidget);
 
             connect(itemWidget, &RecommendationItemWidget::addToCartClicked, this, &MainWindow::onRecommendationAddToCart);
+            connect(itemWidget, &RecommendationItemWidget::productSelected, this, &MainWindow::onRecommendationProductSelected);
         }
     }
 }
@@ -767,6 +798,7 @@ void MainWindow::updateRecommendationDisplay(const QList<Product*>& products)
             ui->recommendationListWidget->setItemWidget(listItem, itemWidget);
 
             connect(itemWidget, &RecommendationItemWidget::addToCartClicked, this, &MainWindow::onRecommendationAddToCart);
+            connect(itemWidget, &RecommendationItemWidget::productSelected, this, &MainWindow::onRecommendationProductSelected);
         }
     }
     
@@ -966,7 +998,7 @@ void MainWindow::onUserQueryRecommendationsReady(const QString& responseText, co
     
     // 显示AI响应文本作为成功消息
     if (!responseText.isEmpty()) {
-        showSuccessMessage(QString("AI导购推荐：%1").arg(responseText.left(100))); // 限制长度避免消息过长
+        showSuccessMessage(QString("AI导购推荐：%1").arg(responseText.left(100)), 8000); // AI推荐信息停留8秒，让用户有足够时间阅读
     }
 }
 
